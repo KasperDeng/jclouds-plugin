@@ -1,11 +1,5 @@
 package jenkins.plugins.jclouds.compute;
 
-import static shaded.com.google.common.base.Throwables.propagate;
-import static shaded.com.google.common.collect.Iterables.getOnlyElement;
-import static shaded.com.google.common.collect.Lists.newArrayList;
-import static org.jclouds.scriptbuilder.domain.Statements.newStatementList;
-import static java.util.Collections.sort;
-
 import java.io.IOException;
 import java.io.StringReader;
 import java.lang.reflect.Method;
@@ -15,25 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import hudson.Extension;
-import hudson.RelativePath;
-import hudson.Util;
-import hudson.model.AutoCompletionCandidates;
-import hudson.model.Describable;
-import hudson.model.Computer;
-import hudson.model.Descriptor;
-import hudson.model.Label;
-import hudson.model.ItemGroup;
-import hudson.model.TaskListener;
-import hudson.model.labels.LabelAtom;
-import hudson.plugins.sshslaves.SSHLauncher;
-import hudson.security.ACL;
-import hudson.security.AccessControlled;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-import hudson.util.Secret;
-import jenkins.model.Jenkins;
 
 import org.apache.commons.lang.StringUtils;
 import org.jclouds.cloudstack.compute.options.CloudStackTemplateOptions;
@@ -58,17 +33,40 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.trilead.ssh2.Connection;
+
 import au.com.bytecode.opencsv.CSVReader;
+import hudson.Extension;
+import hudson.RelativePath;
+import hudson.Util;
+import hudson.model.AutoCompletionCandidates;
+import hudson.model.Computer;
+import hudson.model.Describable;
+import hudson.model.Descriptor;
+import hudson.model.ItemGroup;
+import hudson.model.Label;
+import hudson.model.TaskListener;
+import hudson.model.labels.LabelAtom;
+import hudson.plugins.sshslaves.SSHLauncher;
+import hudson.security.ACL;
+import hudson.security.AccessControlled;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
+import jenkins.model.Jenkins;
 import shaded.com.google.common.base.Strings;
 import shaded.com.google.common.base.Supplier;
 import shaded.com.google.common.collect.ImmutableMap;
 
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator;
-
-import com.trilead.ssh2.Connection;
+import static java.util.Collections.sort;
+import static org.jclouds.scriptbuilder.domain.Statements.newStatementList;
+import static shaded.com.google.common.base.Throwables.propagate;
+import static shaded.com.google.common.collect.Iterables.getOnlyElement;
+import static shaded.com.google.common.collect.Lists.newArrayList;
 
 /**
  * @author Vijay Kiran
@@ -106,6 +104,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
     public final int spoolDelayMs;
     private final Object delayLockObject = new Object();
     public final boolean assignFloatingIp;
+    public final String floatingIpPoolName;
     public final boolean waitPhoneHome;
     public final int waitPhoneHomeTimeout;
     public final String keyPairName;
@@ -124,7 +123,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
                                 final String initScript, final String userData, final String numExecutors, final boolean stopOnTerminate, final String vmPassword,
                                 final String vmUser, final boolean preInstalledJava, final String jvmOptions, final boolean preExistingJenkinsUser,
                                 final String fsRoot, final boolean allowSudo, final boolean installPrivateKey, final int overrideRetentionTime, final int spoolDelayMs,
-                                final boolean assignFloatingIp, final boolean waitPhoneHome, final int waitPhoneHomeTimeout, final String keyPairName,
+                                final boolean assignFloatingIp, final String floatingIpPoolName, final boolean waitPhoneHome, final int waitPhoneHomeTimeout, final String keyPairName,
                                 final boolean assignPublicIp, final String networks, final String securityGroups, final String credentialsId) {
 
         this.name = Util.fixEmptyAndTrim(name);
@@ -152,6 +151,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
         this.overrideRetentionTime = overrideRetentionTime;
         this.spoolDelayMs = spoolDelayMs;
         this.assignFloatingIp = assignFloatingIp;
+        this.floatingIpPoolName = floatingIpPoolName;
         this.waitPhoneHome = waitPhoneHome;
         this.waitPhoneHomeTimeout = waitPhoneHomeTimeout;
         this.keyPairName = keyPairName;
@@ -270,6 +270,11 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
         if (assignFloatingIp && options instanceof NovaTemplateOptions) {
             LOGGER.info("Setting autoAssignFloatingIp to true");
             options.as(NovaTemplateOptions.class).autoAssignFloatingIp(true);
+        }
+
+        if (!Strings.isNullOrEmpty((floatingIpPoolName)) && options instanceof  NovaTemplateOptions) {
+            LOGGER.info("Setting floatingIpPoolName to " + floatingIpPoolName);
+            options.as(NovaTemplateOptions.class).floatingIpPoolNames(floatingIpPoolName);
         }
 
         if (!Strings.isNullOrEmpty((keyPairName)) && options instanceof NovaTemplateOptions) {
