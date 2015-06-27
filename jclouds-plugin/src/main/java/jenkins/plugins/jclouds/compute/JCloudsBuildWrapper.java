@@ -1,5 +1,15 @@
 package jenkins.plugins.jclouds.compute;
 
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.List;
+import java.util.Map;
+
+import org.jclouds.compute.ComputeService;
+import org.jclouds.compute.domain.NodeMetadata;
+import org.jclouds.logging.Logger;
+import org.kohsuke.stapler.DataBoundConstructor;
+
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.Util;
@@ -8,33 +18,22 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Computer;
 import hudson.model.ParametersAction;
+import hudson.model.User;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
-
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.List;
-import java.util.Map;
-
 import jenkins.plugins.jclouds.compute.internal.NodePlan;
 import jenkins.plugins.jclouds.compute.internal.ProvisionPlannedInstancesAndDestroyAllOnError;
 import jenkins.plugins.jclouds.compute.internal.RunningNode;
 import jenkins.plugins.jclouds.compute.internal.TerminateNodes;
 import jenkins.plugins.jclouds.internal.BuildListenerLogger;
-
-import org.jclouds.compute.ComputeService;
-import org.jclouds.compute.domain.NodeMetadata;
-import org.jclouds.logging.Logger;
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import shaded.com.google.common.base.Function;
 import shaded.com.google.common.base.Supplier;
 import shaded.com.google.common.cache.CacheBuilder;
 import shaded.com.google.common.cache.CacheLoader;
 import shaded.com.google.common.cache.LoadingCache;
 import shaded.com.google.common.collect.ImmutableList;
-import shaded.com.google.common.collect.Iterables;
 import shaded.com.google.common.collect.ImmutableList.Builder;
+import shaded.com.google.common.collect.Iterables;
 import shaded.com.google.common.util.concurrent.MoreExecutors;
 
 public class JCloudsBuildWrapper extends BuildWrapper {
@@ -74,6 +73,11 @@ public class JCloudsBuildWrapper extends BuildWrapper {
                 String templateName = Util.replaceMacro(instance.getActualTemplateName(), build.getBuildVariableResolver());
                 // String templateName = getParameterString(parameters, instance.getActualTemplateName(), build);
                 Supplier<NodeMetadata> nodeSupplier = JCloudsCloud.getByName(cloudName).getTemplate(templateName);
+
+                // set job name and current user name to cloud template for creating instance
+                JCloudsSlaveTemplate jCloudsSlaveTemplate = (JCloudsSlaveTemplate) nodeSupplier;
+                jCloudsSlaveTemplate.displayName = (build.getProject().getFullName() + "-" + User.current().toString()).toLowerCase();
+
                 // take the hit here, as opposed to later
                 computeCache.getUnchecked(cloudName);
                 return new NodePlan(cloudName, templateName, instance.count, instance.suspendOrTerminate, nodeSupplier);
