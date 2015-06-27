@@ -159,6 +159,9 @@
         <f:entry title="Floating IP Pool" field="floatingIpPoolName">
           <f:textbox />
         </f:entry>
+        <f:entry title="Network Range for Floating IP Associated with" field="networkRangeFloatingIpAssociated">
+          <f:textbox />
+        </f:entry>
         <f:entry title="Key Pair Name" field="keyPairName">
           <f:textbox />
         </f:entry>

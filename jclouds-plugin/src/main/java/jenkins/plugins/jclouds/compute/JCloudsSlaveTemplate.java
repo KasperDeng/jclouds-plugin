@@ -105,6 +105,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
     private final Object delayLockObject = new Object();
     public final boolean assignFloatingIp;
     public final String floatingIpPoolName;
+    public final String networkRangeFloatingIpAssociated;
     public final boolean waitPhoneHome;
     public final int waitPhoneHomeTimeout;
     public final String keyPairName;
@@ -123,7 +124,8 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
                                 final String initScript, final String userData, final String numExecutors, final boolean stopOnTerminate, final String vmPassword,
                                 final String vmUser, final boolean preInstalledJava, final String jvmOptions, final boolean preExistingJenkinsUser,
                                 final String fsRoot, final boolean allowSudo, final boolean installPrivateKey, final int overrideRetentionTime, final int spoolDelayMs,
-                                final boolean assignFloatingIp, final String floatingIpPoolName, final boolean waitPhoneHome, final int waitPhoneHomeTimeout, final String keyPairName,
+                                final boolean assignFloatingIp, final String floatingIpPoolName, final String networkRangeFloatingIpAssociated,
+                                final boolean waitPhoneHome, final int waitPhoneHomeTimeout, final String keyPairName,
                                 final boolean assignPublicIp, final String networks, final String securityGroups, final String credentialsId) {
 
         this.name = Util.fixEmptyAndTrim(name);
@@ -152,6 +154,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
         this.spoolDelayMs = spoolDelayMs;
         this.assignFloatingIp = assignFloatingIp;
         this.floatingIpPoolName = floatingIpPoolName;
+        this.networkRangeFloatingIpAssociated = networkRangeFloatingIpAssociated;
         this.waitPhoneHome = waitPhoneHome;
         this.waitPhoneHomeTimeout = waitPhoneHomeTimeout;
         this.keyPairName = keyPairName;
@@ -275,6 +278,11 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
         if (!Strings.isNullOrEmpty((floatingIpPoolName)) && options instanceof  NovaTemplateOptions) {
             LOGGER.info("Setting floatingIpPoolName to " + floatingIpPoolName);
             options.as(NovaTemplateOptions.class).floatingIpPoolNames(floatingIpPoolName);
+
+            if(!Strings.isNullOrEmpty(networkRangeFloatingIpAssociated) && options instanceof  NovaTemplateOptions) {
+                LOGGER.info("Associate floating ip to network range " + networkRangeFloatingIpAssociated);
+                options.as(NovaTemplateOptions.class).networkRangeFloatingIpAssociated(networkRangeFloatingIpAssociated);
+            }
         }
 
         if (!Strings.isNullOrEmpty((keyPairName)) && options instanceof NovaTemplateOptions) {
