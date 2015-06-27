@@ -3,8 +3,6 @@ package jenkins.plugins.jclouds.compute.internal;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import junit.framework.TestCase;
-
 import org.jclouds.ContextBuilder;
 import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.ComputeServiceContext;
@@ -12,6 +10,8 @@ import org.jclouds.compute.RunNodesException;
 import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.logging.Logger;
 
+import jenkins.plugins.jclouds.compute.InstancePostAction;
+import junit.framework.TestCase;
 import shaded.com.google.common.base.Function;
 import shaded.com.google.common.base.Functions;
 import shaded.com.google.common.cache.CacheBuilder;
@@ -39,7 +39,7 @@ public class TerminateNodesTest extends TestCase {
         Iterable<RunningNode> runningNodesToSuspend = Iterables.transform(split.get(0), new Function<NodeMetadata, RunningNode>() {
 
             public RunningNode apply(NodeMetadata input) {
-                return new RunningNode("stub", "template", true, input);
+                return new RunningNode("stub", "template", true, InstancePostAction.SUSPEND_SLAVE_JOB_DONE, input);
             }
 
         });
@@ -67,7 +67,7 @@ public class TerminateNodesTest extends TestCase {
         Iterable<RunningNode> runningNodesToDestroy = Iterables.transform(split.get(0), new Function<NodeMetadata, RunningNode>() {
 
             public RunningNode apply(NodeMetadata input) {
-                return new RunningNode("stub", "template", false, input);
+                return new RunningNode("stub", "template", false, InstancePostAction.DESTROY_SLAVE_JOB_DONE,input);
             }
 
         });
@@ -89,7 +89,7 @@ public class TerminateNodesTest extends TestCase {
         Iterable<RunningNode> runningNodesToSuspend = Iterables.transform(split.get(0), new Function<NodeMetadata, RunningNode>() {
 
             public RunningNode apply(NodeMetadata input) {
-                return new RunningNode("stub", "template", true, input);
+                return new RunningNode("stub", "template", true, InstancePostAction.SUSPEND_SLAVE_JOB_DONE, input);
             }
 
         });
@@ -97,7 +97,7 @@ public class TerminateNodesTest extends TestCase {
         Iterable<RunningNode> runningNodesToDestroy = Iterables.transform(split.get(1), new Function<NodeMetadata, RunningNode>() {
 
             public RunningNode apply(NodeMetadata input) {
-                return new RunningNode("stub", "template", false, input);
+                return new RunningNode("stub", "template", false, InstancePostAction.DESTROY_SLAVE_JOB_DONE, input);
             }
 
         });

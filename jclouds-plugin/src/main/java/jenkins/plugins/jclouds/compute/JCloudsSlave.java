@@ -1,14 +1,5 @@
 package jenkins.plugins.jclouds.compute;
 
-import hudson.Extension;
-import hudson.model.TaskListener;
-import hudson.model.Descriptor;
-import hudson.slaves.AbstractCloudComputer;
-import hudson.slaves.AbstractCloudSlave;
-import hudson.slaves.NodeProperty;
-import hudson.slaves.ComputerLauncher;
-import hudson.slaves.RetentionStrategy;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Collections;
@@ -19,6 +10,15 @@ import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.domain.LoginCredentials;
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import hudson.Extension;
+import hudson.model.Descriptor;
+import hudson.model.TaskListener;
+import hudson.slaves.AbstractCloudComputer;
+import hudson.slaves.AbstractCloudSlave;
+import hudson.slaves.ComputerLauncher;
+import hudson.slaves.NodeProperty;
+import hudson.slaves.RetentionStrategy;
 
 /**
  * Jenkins Slave node - managed by JClouds.
@@ -33,7 +33,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
     private String nodeId;
     private boolean pendingDelete;
     private boolean waitPhoneHome;
-    private final int overrideRetentionTime;
+    //private final int overrideRetentionTime;
     private final int waitPhoneHomeTimeout;
     private final String user;
     private final String password;
@@ -41,6 +41,8 @@ public class JCloudsSlave extends AbstractCloudSlave {
     private final boolean authSudo;
     private final String jvmOptions;
     private final String credentialsId;
+
+    private int overrideRetentionTime;
 
     @DataBoundConstructor
     @SuppressWarnings("rawtypes")
@@ -138,11 +140,19 @@ public class JCloudsSlave extends AbstractCloudSlave {
      * @return overrideTime
      */
     public int getRetentionTime() {
-        if (overrideRetentionTime > 0) {
+        if (overrideRetentionTime != 0) {
             return overrideRetentionTime;
         } else {
             return JCloudsCloud.getByName(cloudName).getRetentionTime();
         }
+    }
+
+    public void setOverrideRetentionTime(int overrideRetentionTime) {
+        this.overrideRetentionTime = overrideRetentionTime;
+    }
+
+    public String getNodeId() {
+        return nodeId;
     }
 
     /**

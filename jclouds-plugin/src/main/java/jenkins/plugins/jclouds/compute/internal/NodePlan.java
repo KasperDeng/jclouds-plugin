@@ -10,13 +10,16 @@ public class NodePlan {
     private final int count;
     private final boolean suspendOrTerminate;
     private final Supplier<NodeMetadata> nodeSupplier;
+    private final String slavePostAction;
 
-    public NodePlan(String cloud, String template, int count, boolean suspendOrTerminate, Supplier<NodeMetadata> nodeSupplier) {
+    public NodePlan(String cloud, String template, int count, boolean suspendOrTerminate, String slavePostAction,
+            Supplier<NodeMetadata> nodeSupplier) {
         this.cloudName = cloud;
         this.templateName = template;
         this.count = count;
         this.suspendOrTerminate = suspendOrTerminate;
         this.nodeSupplier = nodeSupplier;
+        this.slavePostAction = slavePostAction;
     }
 
     public String getCloudName() {
@@ -37,5 +40,9 @@ public class NodePlan {
 
     public Supplier<NodeMetadata> getNodeSupplier() {
         return nodeSupplier;
+    }
+
+    public String getSlavePostAction() {
+        return slavePostAction;
     }
 }

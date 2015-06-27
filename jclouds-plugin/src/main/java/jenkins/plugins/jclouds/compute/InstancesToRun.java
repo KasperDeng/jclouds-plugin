@@ -1,6 +1,7 @@
 package jenkins.plugins.jclouds.compute;
 
-import java.io.Serializable;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 
 import hudson.Extension;
 import hudson.Util;
@@ -9,26 +10,23 @@ import hudson.model.Descriptor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
-import org.apache.commons.lang.StringUtils;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.export.Exported;
-import org.kohsuke.stapler.export.ExportedBean;
-
 public final class InstancesToRun extends AbstractDescribableImpl<InstancesToRun> {
     public final String cloudName;
     public final String templateName;
     public final String manualTemplateName;
     public final int count;
     public final boolean suspendOrTerminate;
+    public final String slavePostAction;
 
     @DataBoundConstructor
-    public InstancesToRun(String cloudName, String templateName, String manualTemplateName, int count, boolean suspendOrTerminate) {
+    public InstancesToRun(String cloudName, String templateName, String manualTemplateName, int count,
+            boolean suspendOrTerminate, String slavePostAction) {
         this.cloudName = Util.fixEmptyAndTrim(cloudName);
         this.templateName = Util.fixEmptyAndTrim(templateName);
         this.manualTemplateName = Util.fixEmptyAndTrim(manualTemplateName);
         this.count = count;
         this.suspendOrTerminate = suspendOrTerminate;
+        this.slavePostAction = slavePostAction;
     }
 
     public String getActualTemplateName() {
@@ -71,6 +69,25 @@ public final class InstancesToRun extends AbstractDescribableImpl<InstancesToRun
 
         public FormValidation doCheckCount(@QueryParameter String value) {
             return FormValidation.validatePositiveInteger(value);
+        }
+
+        private String[] getSlavePostAction() {
+            return new String[] {
+                    InstancePostAction.OFFLINE_SLAVE_JOB_DONE,
+                    InstancePostAction.SUSPEND_SLAVE_JOB_DONE,
+                    InstancePostAction.SUSPEND_SLAVE_JOB_FAILED,
+                    InstancePostAction.SNAPSHOT_SLAVE_JOB_DONE,
+                    InstancePostAction.SNAPSHOT_SLAVE_JOB_FAILED,
+                    InstancePostAction.DESTROY_SLAVE_JOB_DONE
+            };
+        }
+
+        public ListBoxModel doFillSlavePostActionItems() {
+            ListBoxModel model = new ListBoxModel();
+            for (String postAction : getSlavePostAction()) {
+                model.add(postAction);
+            }
+            return model;
         }
 
         @Override

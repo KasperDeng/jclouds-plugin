@@ -7,12 +7,15 @@ public class RunningNode {
     private final String template;
     private final boolean suspendOrTerminate;
     private final NodeMetadata node;
+    private final String slavePostAction;
 
-    public RunningNode(String cloud, String template, boolean suspendOrTerminate, NodeMetadata node) {
+    public RunningNode(String cloud, String template, boolean suspendOrTerminate, String slavePostAction,
+            NodeMetadata node) {
         this.cloud = cloud;
         this.template = template;
         this.suspendOrTerminate = suspendOrTerminate;
         this.node = node;
+        this.slavePostAction = slavePostAction;
     }
 
     public String getCloudName() {
@@ -29,5 +32,9 @@ public class RunningNode {
 
     public NodeMetadata getNode() {
         return node;
+    }
+
+    public String getSlavePostAction() {
+        return slavePostAction;
     }
 }

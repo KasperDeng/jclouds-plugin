@@ -42,7 +42,7 @@ public class ProvisionPlannedInstancesAndDestroyAllOnError implements Function<I
                     public void onSuccess(NodeMetadata result) {
                         if (result != null) {
                             cloudTemplateNodeBuilder.add(new RunningNode(nodePlan.getCloudName(), nodePlan.getTemplateName(), nodePlan.isSuspendOrTerminate(),
-                                    result));
+                                    nodePlan.getSlavePostAction(), result));
                         } else {
                             failedLaunches.incrementAndGet();
                         }

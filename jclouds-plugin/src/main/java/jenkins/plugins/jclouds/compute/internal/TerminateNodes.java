@@ -26,7 +26,7 @@ public class TerminateNodes implements Function<Iterable<RunningNode>, Void> {
         Builder<String, String> cloudNodesToSuspendBuilder = ImmutableMultimap.<String, String>builder();
         Builder<String, String> cloudNodesToDestroyBuilder = ImmutableMultimap.<String, String>builder();
         for (RunningNode cloudTemplateNode : runningNode) {
-            if (cloudTemplateNode.isSuspendOrTerminate()) {
+            if (cloudTemplateNode.getSlavePostAction().startsWith("suspend")) {
                 cloudNodesToSuspendBuilder.put(cloudTemplateNode.getCloudName(), cloudTemplateNode.getNode().getId());
             } else {
                 cloudNodesToDestroyBuilder.put(cloudTemplateNode.getCloudName(), cloudTemplateNode.getNode().getId());
