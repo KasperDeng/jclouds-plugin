@@ -6,6 +6,7 @@ import org.jclouds.compute.ComputeService;
 import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.logging.Logger;
 
+import jenkins.plugins.jclouds.compute.InstancePostAction;
 import shaded.com.google.common.base.Function;
 import shaded.com.google.common.base.Predicate;
 import shaded.com.google.common.cache.LoadingCache;
@@ -28,6 +29,8 @@ public class TerminateNodes implements Function<Iterable<RunningNode>, Void> {
         for (RunningNode cloudTemplateNode : runningNode) {
             if (cloudTemplateNode.getSlavePostAction().startsWith("suspend")) {
                 cloudNodesToSuspendBuilder.put(cloudTemplateNode.getCloudName(), cloudTemplateNode.getNode().getId());
+            } else if (InstancePostAction.OFFLINE_SLAVE_JOB_DONE.equals(cloudTemplateNode.getSlavePostAction())) {
+                // Nothing to do with offline post action
             } else {
                 cloudNodesToDestroyBuilder.put(cloudTemplateNode.getCloudName(), cloudTemplateNode.getNode().getId());
             }

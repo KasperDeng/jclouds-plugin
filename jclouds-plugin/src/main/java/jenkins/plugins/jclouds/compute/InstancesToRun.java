@@ -16,7 +16,7 @@ public final class InstancesToRun extends AbstractDescribableImpl<InstancesToRun
     public final String manualTemplateName;
     public final int count;
     public final boolean suspendOrTerminate;
-    public final String slavePostAction;
+    public String slavePostAction;
 
     @DataBoundConstructor
     public InstancesToRun(String cloudName, String templateName, String manualTemplateName, int count,
@@ -73,12 +73,12 @@ public final class InstancesToRun extends AbstractDescribableImpl<InstancesToRun
 
         private String[] getSlavePostAction() {
             return new String[] {
+                    InstancePostAction.DESTROY_SLAVE_JOB_DONE,
                     InstancePostAction.OFFLINE_SLAVE_JOB_DONE,
                     InstancePostAction.SUSPEND_SLAVE_JOB_DONE,
                     InstancePostAction.SUSPEND_SLAVE_JOB_FAILED,
                     InstancePostAction.SNAPSHOT_SLAVE_JOB_DONE,
                     InstancePostAction.SNAPSHOT_SLAVE_JOB_FAILED,
-                    InstancePostAction.DESTROY_SLAVE_JOB_DONE
             };
         }
 

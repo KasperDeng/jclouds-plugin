@@ -7,7 +7,7 @@ public class RunningNode {
     private final String template;
     private final boolean suspendOrTerminate;
     private final NodeMetadata node;
-    private final String slavePostAction;
+    private String slavePostAction;
 
     public RunningNode(String cloud, String template, boolean suspendOrTerminate, String slavePostAction,
             NodeMetadata node) {
@@ -36,5 +36,9 @@ public class RunningNode {
 
     public String getSlavePostAction() {
         return slavePostAction;
+    }
+
+    public void setSlavePostAction(String slavePostAction) {
+        this.slavePostAction = slavePostAction;
     }
 }

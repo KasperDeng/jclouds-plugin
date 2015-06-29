@@ -110,34 +110,45 @@ public class JCloudsBuildWrapper extends BuildWrapper {
                 Result buildResult = build.getResult();
                 for (RunningNode cloudTemplateNode : runningNode) {
                     switch(cloudTemplateNode.getSlavePostAction()) {
+                    case InstancePostAction.DESTROY_SLAVE_JOB_DONE:
+                        if ("yes".equals(build.getEnvVars().get("offline"))) {
+                            LOGGER.info("Offline parameter set: Offline slave " + cloudTemplateNode.getNode().getId()
+                                    + " when job done");
+                            cloudTemplateNode.setSlavePostAction(InstancePostAction.OFFLINE_SLAVE_JOB_DONE);
+                        } else {
+                            LOGGER.info("Destroy slave " + cloudTemplateNode.getNode().getId() + " when job done");
+                        }
+                        break;
                     case InstancePostAction.OFFLINE_SLAVE_JOB_DONE:
-                        //TODO Kasper check the OFFLINE environment variable
                         //Nothing to do with the to-be-offline slave
-                        LOGGER.info("Offline slave " + cloudTemplateNode.getNode().getId());
-                        cloudTemplateNode.getNode().getId();
-                        //offlineSlave();
+                        LOGGER.info("Offline slave " + cloudTemplateNode.getNode().getId() + " when job done");
+                        break;
                     case InstancePostAction.SUSPEND_SLAVE_JOB_DONE:
                         LOGGER.info("Suspend slave " + cloudTemplateNode.getNode().getId() + " when job done");
-                        terminateNodes.apply(runningNode);
+                        break;
                     case InstancePostAction.SUSPEND_SLAVE_JOB_FAILED:
                         if (buildResult == Result.UNSTABLE || buildResult != Result.FAILURE) {
                             LOGGER.info("Suspend slave " + cloudTemplateNode.getNode().getId() + " when job failed");
-                            terminateNodes.apply(runningNode);
+                        } else {
+                            cloudTemplateNode.setSlavePostAction(InstancePostAction.DESTROY_SLAVE_JOB_DONE);
                         }
+                        break;
                     case InstancePostAction.SNAPSHOT_SLAVE_JOB_DONE:
                         LOGGER.info("Snapshot slave " + cloudTemplateNode.getNode().getId() + " when job done");
                         //TODO Kasper snapshot the slave, set retention time to 15 mins for taking snapshot
+                        break;
                     case InstancePostAction.SNAPSHOT_SLAVE_JOB_FAILED:
                         if (buildResult == Result.UNSTABLE || buildResult != Result.FAILURE) {
                             LOGGER.info("Snapshot slave " + cloudTemplateNode.getNode().getId() + " when job failed");
                             //TODO Kasper snapshot the slave, set retention time to 15 mins for taking snapshot
+                        } else {
+                            cloudTemplateNode.setSlavePostAction(InstancePostAction.DESTROY_SLAVE_JOB_DONE);
                         }
-                    case InstancePostAction.DESTROY_SLAVE_JOB_DONE:
-                        LOGGER.info("Destroy slave " + cloudTemplateNode.getNode().getId() + " when job done");
-                        terminateNodes.apply(runningNode);
+                        break;
                     default:
                     }
                 }
+                terminateNodes.apply(runningNode);
                 return true;
             }
 
