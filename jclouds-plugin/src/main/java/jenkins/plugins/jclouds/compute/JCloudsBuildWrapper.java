@@ -79,6 +79,7 @@ public class JCloudsBuildWrapper extends BuildWrapper {
                 // set job name and current user name to cloud template for creating instance
                 JCloudsSlaveTemplate jCloudsSlaveTemplate = (JCloudsSlaveTemplate) nodeSupplier;
                 jCloudsSlaveTemplate.displayName = (build.getProject().getFullName() + "-" + User.current().toString()).toLowerCase();
+                LOGGER.info("Use name: " + jCloudsSlaveTemplate.displayName + "for creating instance");
 
                 // take the hit here, as opposed to later
                 computeCache.getUnchecked(cloudName);
