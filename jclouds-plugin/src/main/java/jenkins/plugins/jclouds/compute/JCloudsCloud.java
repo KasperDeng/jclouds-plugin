@@ -197,9 +197,11 @@ public class JCloudsCloud extends Cloud {
 
             plannedNodeList.add(new PlannedNode(template.name, Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                 public Node call() throws Exception {
+                    LOGGER.info("provisionSlave start");
                     // TODO: record the output somewhere
                     JCloudsSlave jcloudsSlave = template.provisionSlave(StreamTaskListener.fromStdout());
                     Jenkins.getInstance().addNode(jcloudsSlave);
+                    LOGGER.info("provisionSlave done");
 
                     /* Cloud instances may have a long init script. If we declare the provisioning complete by returning
                     without the connect operation, NodeProvisioner may decide that it still wants one more instance,
@@ -237,6 +239,7 @@ public class JCloudsCloud extends Cloud {
                 throw new ExecutionException(new Throwable(message));
             }
         }
+        LOGGER.info(String.format("The slave [%s] is ready to work now !!!", jcloudsSlave.getDisplayName()));
     }
 
     @Override
