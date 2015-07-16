@@ -1,7 +1,5 @@
 package jenkins.plugins.jclouds.compute;
 
-import javax.annotation.Nullable;
-import javax.servlet.ServletException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
@@ -9,6 +7,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -16,7 +15,34 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
+import javax.servlet.ServletException;
+
+import org.jclouds.Constants;
+import org.jclouds.ContextBuilder;
+import org.jclouds.apis.Apis;
+import org.jclouds.compute.ComputeService;
+import org.jclouds.compute.ComputeServiceContext;
+import org.jclouds.compute.config.ComputeServiceProperties;
+import org.jclouds.compute.domain.ComputeMetadata;
+import org.jclouds.compute.domain.NodeMetadata;
+import org.jclouds.enterprise.config.EnterpriseConfigurationModule;
+import org.jclouds.location.reference.LocationConstants;
+import org.jclouds.logging.jdk.config.JDKLoggingModule;
+import org.jclouds.openstack.nova.v2_0.NovaApi;
+import org.jclouds.openstack.nova.v2_0.domain.Flavor;
+import org.jclouds.openstack.nova.v2_0.domain.Quota;
+import org.jclouds.openstack.nova.v2_0.features.FlavorApi;
+import org.jclouds.providers.Providers;
+import org.jclouds.ssh.SshKeys;
+import org.jclouds.sshj.config.SshjSshClientModule;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
+
 import com.google.inject.Module;
+
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.AutoCompletionCandidates;
@@ -33,24 +59,6 @@ import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import hudson.util.StreamTaskListener;
 import jenkins.model.Jenkins;
-import org.jclouds.Constants;
-import org.jclouds.ContextBuilder;
-import org.jclouds.apis.Apis;
-import org.jclouds.compute.ComputeService;
-import org.jclouds.compute.ComputeServiceContext;
-import org.jclouds.compute.config.ComputeServiceProperties;
-import org.jclouds.compute.domain.ComputeMetadata;
-import org.jclouds.compute.domain.NodeMetadata;
-import org.jclouds.enterprise.config.EnterpriseConfigurationModule;
-import org.jclouds.location.reference.LocationConstants;
-import org.jclouds.logging.jdk.config.JDKLoggingModule;
-import org.jclouds.providers.Providers;
-import org.jclouds.ssh.SshKeys;
-import org.jclouds.sshj.config.SshjSshClientModule;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
 import shaded.com.google.common.base.Objects;
 import shaded.com.google.common.base.Predicate;
 import shaded.com.google.common.base.Strings;
@@ -71,6 +79,7 @@ public class JCloudsCloud extends Cloud {
 
     public final String identity;
     public final Secret credential;
+    public final String tenantId;
     public final String providerName;
 
     public final String privateKey;
@@ -101,7 +110,7 @@ public class JCloudsCloud extends Cloud {
     }
 
     @DataBoundConstructor
-    public JCloudsCloud(final String profile, final String providerName, final String identity, final String credential, final String privateKey,
+    public JCloudsCloud(final String profile, final String providerName, final String identity, final String credential, final String tenantId, final String privateKey,
                         final String publicKey, final String endPointUrl, final int instanceCap, final int retentionTime, final int scriptTimeout, final int startTimeout,
                         final String zones, final List<JCloudsSlaveTemplate> templates) {
         super(Util.fixEmptyAndTrim(profile));
@@ -109,6 +118,7 @@ public class JCloudsCloud extends Cloud {
         this.providerName = Util.fixEmptyAndTrim(providerName);
         this.identity = Util.fixEmptyAndTrim(identity);
         this.credential = Secret.fromString(credential);
+        this.tenantId = Util.fixEmptyAndTrim(tenantId);
         this.privateKey = privateKey;
         this.publicKey = publicKey;
         this.endPointUrl = Util.fixEmptyAndTrim(endPointUrl);
@@ -187,6 +197,14 @@ public class JCloudsCloud extends Cloud {
     public Collection<NodeProvisioner.PlannedNode> provision(Label label, int excessWorkload) {
         final JCloudsSlaveTemplate template = getTemplate(label);
         List<PlannedNode> plannedNodeList = new ArrayList<PlannedNode>();
+
+        if (determineExceedCloudQuota(template)) {
+            LOGGER.info("The new planned node will cause quota exceed in cloud " + template.getCloud().getDisplayName());
+            return  plannedNodeList;
+        }
+
+        LOGGER.info("excessWorkload:" + excessWorkload + " instanceCap:" + instanceCap + " plannedNodeListSize:"
+                + plannedNodeList.size() + " running nodes:" + getRunningNodesCount());
 
         while (excessWorkload > 0 && !Jenkins.getInstance().isQuietingDown() && !Jenkins.getInstance().isTerminating()) {
 
@@ -315,6 +333,102 @@ public class JCloudsCloud extends Cloud {
             }
         }
         return nodeCount;
+    }
+
+    /**
+     * Determine how many nodes are currently running for this cloud.
+     */
+    private JCloudResource getRunningNodesResource() {
+        JCloudResource jCloudResource = new JCloudResource();
+
+        for (ComputeMetadata cm : getCompute().listNodes()) {
+            if (NodeMetadata.class.isInstance(cm)) {
+                String nodeGroup = ((NodeMetadata) cm).getGroup();
+
+                if (getTemplate(nodeGroup) != null && !((NodeMetadata) cm).getStatus().equals(NodeMetadata.Status.SUSPENDED)
+                        && !((NodeMetadata) cm).getStatus().equals(NodeMetadata.Status.TERMINATED)) {
+                    jCloudResource.vcpuAmount += ((NodeMetadata) cm).getHardware().getProcessors().size();
+                    jCloudResource.ramAmount += ((NodeMetadata) cm).getHardware().getRam();
+                    jCloudResource.runningNodeNum++;
+                }
+            }
+        }
+        return jCloudResource;
+    }
+
+    private boolean determineExceedCloudQuota(JCloudsSlaveTemplate template) {
+        ComputeService computeService = getCompute();
+        LOGGER.info("Debug: get tenant from template: " + tenantId);
+        Map<String, Integer> cloudQuota;
+        try {
+            cloudQuota = computeService.getQuotaByTenant(zones, tenantId);
+        } catch (Exception e) {
+            LOGGER.info("Failed to get quota of cloud.\n" + e);
+            return false;
+        }
+
+        Map<String, Integer> totalUsage;
+        try {
+            totalUsage = computeService.getTotalUsageByTenant(zones, tenantId);
+        } catch (Exception e) {
+            LOGGER.info("Failed to get total usage of tenant. \n" + e);
+            return false;
+        }
+
+        int plannedVcpu = 0;
+        int plannedRam = 0;
+
+        LOGGER.info("Debug: flavorId: " + template.hardwareId.split("/")[1]);
+        Map<String, Integer> flavor = null;
+        if (!Strings.isNullOrEmpty(template.hardwareId)) {
+            String flavorId = template.hardwareId.split("/")[1];
+            try {
+                flavor = computeService.getFlavorByFlavorId(zones, flavorId);
+            } catch (Exception e) {
+                LOGGER.info("Failed to get flavor. \n" + e);
+                // hardcode for demo
+                plannedVcpu = 4;
+                plannedRam = 8;
+            }
+            if (flavor != null) {
+                plannedVcpu = flavor.get("vcpu");
+                plannedRam = flavor.get("ram");
+            }
+        } else {
+            plannedVcpu = (int) template.cores;
+            plannedRam = template.ram;
+        }
+
+        LOGGER.info("Debug: vcpu quota:" + cloudQuota.get("vcpu") + " ram quota: " + cloudQuota.get("ram") +
+                " instance quota:" + cloudQuota.get("instance"));
+
+        if (flavor != null) {
+            LOGGER.info("Debug: flavor vcpu:" + flavor.get("vcpu") + " flavor ram: " + flavor.get("ram"));
+        } else {
+            LOGGER.info("Debug: flavor vcpu:" + plannedVcpu + " flavor ram: " + plannedRam);
+        }
+
+        if (totalUsage != null) {
+            LOGGER.info("Debug: current vcpu:" + totalUsage.get("vcpu") + " current ram: " + totalUsage.get("ram") +
+                    " current instance:" + totalUsage.get("instance"));
+        }
+
+        if (cloudQuota != null) {
+            if (totalUsage.get("vcpu") + plannedVcpu > cloudQuota.get("vcpu")) {
+                LOGGER.info(String.format("The cpu amount (current + planned = %d + %d) exceeds the quota %d",
+                        totalUsage.get("vcpu"), plannedVcpu, cloudQuota.get("vcpu")));
+                return true;
+            } else if (totalUsage.get("ram") + plannedRam > cloudQuota.get("ram")) {
+                LOGGER.info(String.format("The ram amount (current + planned = %d + %d) exceeds the quota %d",
+                        totalUsage.get("ram"), plannedRam, cloudQuota.get("ram")));
+                return true;
+            } else if (totalUsage.get("instance") + 1 > cloudQuota.get("instance")) {
+                LOGGER.info(String.format("The running instances (current + planned = %d + %d) exceeds the quota %d",
+                        totalUsage.get("instance"), 1, cloudQuota.get("instance")));
+                return true;
+            }
+        }
+        return false;
     }
 
     @Extension
@@ -477,5 +591,31 @@ public class JCloudsCloud extends Cloud {
             }
             return FormValidation.ok();
         }
+    }
+
+    private class JCloudResource {
+        public int vcpuAmount;
+        public int ramAmount;
+        public int runningNodeNum;
+    }
+
+    private Quota getQuotaByTenant(NovaApi novaApi, String zone, String tenant) {
+        Iterator iterator = novaApi.getConfiguredZones().iterator();
+        while(iterator.hasNext()) {
+            String z = (String) iterator.next();
+            LOGGER.info("zone: " + z);
+        }
+        if (novaApi.getQuotaExtensionForZone(zone).isPresent()) {
+            return novaApi.getQuotaExtensionForZone(zone).get().getByTenant(tenant);
+        }
+        return null;
+    }
+
+    private Flavor getFlavorByFlavorId(NovaApi novaApi, String zone, String flavorId) {
+        FlavorApi flavorApi = novaApi.getFlavorApiForZone(zone);
+        if (flavorApi != null) {
+            return flavorApi.get(flavorId);
+        }
+        return null;
     }
 }
