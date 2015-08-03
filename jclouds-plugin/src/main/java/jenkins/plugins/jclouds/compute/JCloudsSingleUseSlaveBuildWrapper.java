@@ -15,7 +15,6 @@ import hudson.model.Result;
 import hudson.slaves.OfflineCause;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
-import jenkins.model.Jenkins;
 import shaded.com.google.common.base.Strings;
 
 public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
@@ -41,7 +40,14 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             final ComputeService computeService = jcloudsCloud.getCompute();
 
             // Rename that running node with job name and user name
-            final String nodeName = (build.getEnvVars().get("BUILD_TAG") + "-" + Jenkins.getAuthentication().getName()).toLowerCase();
+            String buildTag = (String) build.getEnvVars().get("BUILD_TAG");
+            final String nodeName;
+            String buildUser = (String) build.getEnvVars().get("BUILD_USER");
+            if (Strings.isNullOrEmpty(buildUser)) {
+                nodeName = buildTag.toLowerCase();
+            } else {
+                nodeName = (buildTag + "-" + buildUser).toLowerCase();
+            }
             LOGGER.info("Rename running node with name: " + nodeName);
             try {
                 computeService.renameNode(jcloudsSlave.getNodeId(), nodeName);
@@ -67,6 +73,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                             LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
                                     + "(" + nodeId + ") when job done");
                             jcloudsSlave.setOverrideRetentionTime(-1);
+                            jcloudsSlave.setPendingDelete(true);
                             break;
                         case InstancePostAction.SUSPEND_SLAVE_JOB_FAILED:
                             Result buildResult = build.getResult();
