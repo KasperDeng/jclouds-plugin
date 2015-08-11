@@ -47,13 +47,14 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
                     computersToDeleteBuilder.add(comp);
                     ListenableFuture<?> f = executor.submit(new Runnable() {
                         public void run() {
-                            logger.log(Level.INFO, "Deleting pending node " + comp.getName());
                             try {
                                 if (comp.getRetentionTime() != -1) {
+                                    logger.log(Level.INFO, "Deleting pending node " + comp.getName());
                                     comp.getNode().terminate();
                                 } else {
                                     // RetentionTime equals -1 means the slave is offline
                                     // only remove it from jenkins and keep instance in openstack for further use
+                                    logger.log(Level.INFO, "Remove offline node " + comp.getName());
                                     Jenkins.getInstance().removeNode(comp.getNode());
                                 }
                             } catch (IOException e) {
