@@ -67,7 +67,7 @@ public class TerminateNodesTest extends TestCase {
         Iterable<RunningNode> runningNodesToDestroy = Iterables.transform(split.get(0), new Function<NodeMetadata, RunningNode>() {
 
             public RunningNode apply(NodeMetadata input) {
-                return new RunningNode("stub", "template", false, InstancePostAction.DESTROY_SLAVE_JOB_DONE,input);
+                return new RunningNode("stub", "template", false, InstancePostAction.DESTROY_SLAVE,input);
             }
 
         });
@@ -97,7 +97,7 @@ public class TerminateNodesTest extends TestCase {
         Iterable<RunningNode> runningNodesToDestroy = Iterables.transform(split.get(1), new Function<NodeMetadata, RunningNode>() {
 
             public RunningNode apply(NodeMetadata input) {
-                return new RunningNode("stub", "template", false, InstancePostAction.DESTROY_SLAVE_JOB_DONE, input);
+                return new RunningNode("stub", "template", false, InstancePostAction.DESTROY_SLAVE, input);
             }
 
         });

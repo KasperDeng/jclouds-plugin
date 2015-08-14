@@ -44,9 +44,9 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             final String nodeName;
             String buildUser = (String) build.getEnvVars().get("BUILD_USER");
             if (Strings.isNullOrEmpty(buildUser)) {
-                nodeName = buildTag.toLowerCase();
+                nodeName = buildTag.replaceFirst("jenkins-","").toLowerCase();
             } else {
-                nodeName = (buildTag + "-" + buildUser).toLowerCase();
+                nodeName = (buildTag.replaceFirst("jenkins-","") + "-" + buildUser).toLowerCase();
             }
             LOGGER.info("Rename running node with name: " + nodeName);
             try {
@@ -69,11 +69,12 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                     String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
                     if (!Strings.isNullOrEmpty(slavePostAction)) {
                         switch (slavePostAction) {
-                        case InstancePostAction.OFFLINE_SLAVE_JOB_DONE:
+                        case InstancePostAction.OFFLINE_SLAVE:
                             LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
                                     + "(" + nodeId + ") when job done");
                             jcloudsSlave.setOverrideRetentionTime(-1);
                             jcloudsSlave.setPendingDelete(true);
+                            computeService.renameNode(jcloudsSlave.getNodeId(), nodeName + "-offline");
                             break;
                         case InstancePostAction.SUSPEND_SLAVE_JOB_FAILED:
                             Result buildResult = build.getResult();

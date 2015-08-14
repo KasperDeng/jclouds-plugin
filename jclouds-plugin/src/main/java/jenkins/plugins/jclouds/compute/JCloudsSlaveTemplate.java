@@ -508,8 +508,17 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
                 final Set<? extends Image> images = listImages(providerName, identity, Secret.fromString(credential).getPlainText(), endPointUrl, zones);
                 if (images != null) {
                     for (final Image image : images) {
+                        if (image.getName().equalsIgnoreCase(imageNameRegex)) {
+                            return FormValidation.ok("Image Name Regex is valid. The fully match image is \n"
+                                    + "name: " + image.getName() + "\n"
+                                    + "ID: " + image.getId());
+                        }
+                    }
+                    for (final Image image : images) {
                         if (image.getName().matches(imageNameRegex)) {
-                            return FormValidation.ok("Image Name Regex is valid.");
+                            return FormValidation.ok("Image Name Regex is valid. The match image is \n"
+                                    + "name: " + image.getName() + "\n"
+                                    + "ID: " + image.getId());
                         }
                     }
                 }

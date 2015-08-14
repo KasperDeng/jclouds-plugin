@@ -73,8 +73,8 @@ public final class InstancesToRun extends AbstractDescribableImpl<InstancesToRun
 
         private String[] getSlavePostAction() {
             return new String[] {
-                    InstancePostAction.DESTROY_SLAVE_JOB_DONE,
-                    InstancePostAction.OFFLINE_SLAVE_JOB_DONE,
+                    InstancePostAction.DESTROY_SLAVE,
+                    InstancePostAction.OFFLINE_SLAVE,
                     InstancePostAction.SUSPEND_SLAVE_JOB_DONE,
                     InstancePostAction.SUSPEND_SLAVE_JOB_FAILED,
                     InstancePostAction.SNAPSHOT_SLAVE_JOB_DONE,

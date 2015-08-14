@@ -29,7 +29,7 @@ public class TerminateNodes implements Function<Iterable<RunningNode>, Void> {
         for (RunningNode cloudTemplateNode : runningNode) {
             if (cloudTemplateNode.getSlavePostAction().startsWith("suspend")) {
                 cloudNodesToSuspendBuilder.put(cloudTemplateNode.getCloudName(), cloudTemplateNode.getNode().getId());
-            } else if (InstancePostAction.OFFLINE_SLAVE_JOB_DONE.equals(cloudTemplateNode.getSlavePostAction())) {
+            } else if (InstancePostAction.OFFLINE_SLAVE.equals(cloudTemplateNode.getSlavePostAction())) {
                 // Nothing to do with offline post action
             } else {
                 cloudNodesToDestroyBuilder.put(cloudTemplateNode.getCloudName(), cloudTemplateNode.getNode().getId());
