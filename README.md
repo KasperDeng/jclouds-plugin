@@ -97,3 +97,38 @@ After you configure a cloudstorage provider, you can enable the publishing file 
 * Click save.
 
 When the build is complete and succesful, the configured files will be published to the configured blobstore.
+
+### Jclouds-plugin Extension summary (details in git log) ###
+* New Features
+  1. Select customized floating IP pool for floating IP association when starting openstack instances
+     - In previous jcloud plugin version, it needs the "default_floating_pool=nova" config in /etc/nova/nova.conf
+  2. Give name (based on jenkins env vars BUILD_TAG + BUILD_USER) for openstack instance
+  3. Offline the instance (based on jenkins env var slavePostAction: offline/destroy) and keep in openstack for further debug
+  4. Determine the resource usage in openstack when starting new instance
+     - Create some APIs in Jcloud. They are used for resource calculation.
+       + getQuotaByTenant
+       + getTotalUsageByTenant
+       + getFlavorByFlavorId
+  5. Give name (existing name + '-offline') for the offline os instance 
+  6. Fix the issue in fuzzy search image name by its provided regex function
+     - 1st search the image name input in the regex section of global cloud configuration
+     - If no match, use existing fuzzy search to match the regex provided
+     - The button "Check Image Name Regex" is enhanced to show the result with above logic
+     - The image cache expired time is changed to 5 mins
+  7. The instance clean up thread recurrence period is updated from 5 mins to 1 min
+* Config in jenkins global configuration (just highlight some inportant)
+  - Cloud (JClouds)
+    + tenantId: get help by clicking "?". Get tenantId by CLI: keystone tenant-list. It's used for getting os quota and usage.
+  - Cloud Instance Templates
+    + Number of Executors: set to 1 to ensure only 1 executor running on one os instance
+  - Image/OS Options
+    + Specify Image Name Regex: give the full image name in OS
+  - "Use Pre-existing Jenkins User" and "Use Pre-installed Java": get it clicked
+  - Open Stack Options
+    + "Floating IP Pool": the pool name of floating IPs in OS
+    + "Network Range for Floating IP Associated with": give your floating IP range for attached
+* Config in each job
+  - Label Expression: input your cloud instance template label
+  - click "JClouds Single Slave Plugin-Ex" to enable jclouds-plugin for this job
+  - jenkins env var $JENKINS_NODE_NAME can be used to get the name of your instance
+
