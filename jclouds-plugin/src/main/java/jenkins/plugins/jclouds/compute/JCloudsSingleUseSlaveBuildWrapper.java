@@ -27,7 +27,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
 
     @Override
     public Environment setUp(final AbstractBuild build, Launcher launcher, final BuildListener listener) {
-        LOGGER.info("Start single-use slave Extension setup");
+        LOGGER.finest("Debug: Start single-use slave Extension setup");
 
         if (JCloudsComputer.class.isInstance(build.getExecutor().getOwner())) {
             // Get current running node
@@ -35,8 +35,6 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             final JCloudsCloud jcloudsCloud = JCloudsCloud.getByName(c.getCloudName());
             final JCloudsSlave jcloudsSlave = c.getNode();
             final String nodeId = jcloudsSlave.getNodeId();
-            LOGGER.info("Get slave: " + jcloudsSlave.getDisplayName() + " nodeId " + nodeId);
-            LOGGER.info("Get slave user id: " + jcloudsSlave.getUserId());
             final ComputeService computeService = jcloudsCloud.getCompute();
 
             // Rename that running node with job name and user name
@@ -48,11 +46,11 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             } else {
                 nodeName = (buildTag.replaceFirst("jenkins-","") + "-" + buildUser).toLowerCase();
             }
-            LOGGER.info("Rename running node with name: " + nodeName);
+            LOGGER.fine("Rename running node(" + nodeId + ") with name: " + nodeName);
             try {
-                computeService.renameNode(jcloudsSlave.getNodeId(), nodeName);
+                computeService.renameNode(nodeId, nodeName);
             } catch (Exception e) {
-                LOGGER.info("Failed to rename the node to: " + nodeName + "\n" + e);
+                LOGGER.warning("Failed to rename the node to: " + nodeName + "\n" + e);
             }
 
             return new Environment() {
@@ -71,30 +69,27 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                         switch (slavePostAction) {
                         case InstancePostAction.OFFLINE_SLAVE:
                             LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
-                                    + "(" + nodeId + ") when job done");
+                                    + "(" + nodeId + ")");
                             jcloudsSlave.setOverrideRetentionTime(-1);
                             jcloudsSlave.setPendingDelete(true);
-                            computeService.renameNode(jcloudsSlave.getNodeId(), nodeName + "-offline");
+                            computeService.renameNode(nodeId, nodeName + "-offline");
                             break;
                         case InstancePostAction.SUSPEND_SLAVE_JOB_FAILED:
                             Result buildResult = build.getResult();
                             if (buildResult == Result.UNSTABLE || buildResult != Result.FAILURE) {
-                                LOGGER.info("Suspend slave " + jcloudsSlave.getDisplayName()
-                                        + "(" + nodeId + ") when job failed");
+                                LOGGER.info("Suspend slave " + jcloudsSlave.getDisplayName() + "(" + nodeId + ") when job failed");
                                 jcloudsSlave.setOverrideRetentionTime(-1);
                                 //computeService.suspendNode(nodeId);
                             }
                             break;
                         case InstancePostAction.SUSPEND_SLAVE_JOB_DONE:
-                            LOGGER.info("Suspend slave " + jcloudsSlave.getDisplayName()
-                                    + "(" + nodeId + ") when job done");
+                            LOGGER.info("Suspend slave " + jcloudsSlave.getDisplayName() + "(" + nodeId + ") when job done");
                             jcloudsSlave.setOverrideRetentionTime(-1);
                             //computeService.suspendNode(nodeId);
                             break;
                         default:
                             //Nothing to do if to destroy the node, let it do by cleanup thread
-                            LOGGER.info("To delete slave " + jcloudsSlave.getDisplayName()
-                                    + "(" + nodeId + ") when job done");
+                            LOGGER.info("To delete slave " + jcloudsSlave.getDisplayName() + "(" + nodeId + ")");
                         }
                     }
                     return true;

@@ -20,7 +20,7 @@ public class JCloudsSlaveTemplateTest extends HudsonTestCase {
         List<JCloudsSlaveTemplate> templates = new ArrayList<JCloudsSlaveTemplate>();
         templates.add(originalTemplate);
 
-        JCloudsCloud originalCloud = new JCloudsCloud("aws-profile", "aws-ec2", "identity", "credential", "privateKey", "publicKey", "endPointUrl", 1, 30,
+        JCloudsCloud originalCloud = new JCloudsCloud("aws-profile", "aws-ec2", "identity", "credential", "privateKey", "tenantId", "publicKey", "endPointUrl", 1, 30,
                 600 * 1000, 600 * 1000, null, templates);
 
         hudson.clouds.add(originalCloud);

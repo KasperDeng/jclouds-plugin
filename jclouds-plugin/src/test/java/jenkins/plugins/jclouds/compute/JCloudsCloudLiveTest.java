@@ -1,14 +1,13 @@
 package jenkins.plugins.jclouds.compute;
 
-import hudson.util.FormValidation;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 
-import junit.framework.TestCase;
-
 import org.jclouds.ssh.SshKeys;
+
+import hudson.util.FormValidation;
+import junit.framework.TestCase;
 
 public class JCloudsCloudLiveTest extends TestCase {
 
@@ -25,8 +24,8 @@ public class JCloudsCloudLiveTest extends TestCase {
 
         // TODO: this may need to vary per test
         cloud = new JCloudsCloud(fixture.getProvider() + "-profile", fixture.getProvider(), fixture.getIdentity(), fixture.getCredential(),
-                generatedKeys.get("private"), generatedKeys.get("public"), fixture.getEndpoint(), 1, 30, 600 * 1000, 600 * 1000, null,
-                Collections.<JCloudsSlaveTemplate>emptyList());
+                fixture.getTenantId(), generatedKeys.get("private"), generatedKeys.get("public"), fixture.getEndpoint(),
+                1, 30, 600 * 1000, 600 * 1000, null, Collections.<JCloudsSlaveTemplate>emptyList());
     }
 
     public void testDoTestConnectionCorrectCredentialsEtc() throws IOException {

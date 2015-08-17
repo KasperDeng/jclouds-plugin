@@ -215,11 +215,11 @@ public class JCloudsCloud extends Cloud {
 
             plannedNodeList.add(new PlannedNode(template.name, Computer.threadPoolForRemoting.submit(new Callable<Node>() {
                 public Node call() throws Exception {
-                    LOGGER.info("provisionSlave start");
+                    LOGGER.finest("provisionSlave start");
                     // TODO: record the output somewhere
                     JCloudsSlave jcloudsSlave = template.provisionSlave(StreamTaskListener.fromStdout());
                     Jenkins.getInstance().addNode(jcloudsSlave);
-                    LOGGER.info("provisionSlave done");
+                    LOGGER.finest("provisionSlave done");
 
                     /* Cloud instances may have a long init script. If we declare the provisioning complete by returning
                     without the connect operation, NodeProvisioner may decide that it still wants one more instance,
@@ -358,12 +358,12 @@ public class JCloudsCloud extends Cloud {
 
     private boolean determineExceedCloudQuota(JCloudsSlaveTemplate template) {
         ComputeService computeService = getCompute();
-        LOGGER.info("Debug: get tenant from template: " + tenantId);
+        LOGGER.finest("Debug: get tenant from template: " + tenantId);
         Map<String, Integer> cloudQuota;
         try {
             cloudQuota = computeService.getQuotaByTenant(zones, tenantId);
         } catch (Exception e) {
-            LOGGER.info("Failed to get quota of cloud.\n" + e);
+            LOGGER.warning("Failed to get quota of cloud.\n" + e);
             return false;
         }
 
@@ -371,21 +371,21 @@ public class JCloudsCloud extends Cloud {
         try {
             totalUsage = computeService.getTotalUsageByTenant(zones, tenantId);
         } catch (Exception e) {
-            LOGGER.info("Failed to get total usage of tenant. \n" + e);
+            LOGGER.warning("Failed to get total usage of tenant. \n" + e);
             return false;
         }
 
         int plannedVcpu = 0;
         int plannedRam = 0;
 
-        LOGGER.info("Debug: flavorId: " + template.hardwareId.split("/")[1]);
+        LOGGER.finest("Debug: flavorId: " + template.hardwareId.split("/")[1]);
         Map<String, Integer> flavor = null;
         if (!Strings.isNullOrEmpty(template.hardwareId)) {
             String flavorId = template.hardwareId.split("/")[1];
             try {
                 flavor = computeService.getFlavorByFlavorId(zones, flavorId);
             } catch (Exception e) {
-                LOGGER.info("Failed to get flavor. \n" + e);
+                LOGGER.warning("Failed to get flavor. \n" + e);
                 // hardcode for demo
                 plannedVcpu = 4;
                 plannedRam = 8;
@@ -399,17 +399,17 @@ public class JCloudsCloud extends Cloud {
             plannedRam = template.ram;
         }
 
-        LOGGER.info("Debug: vcpu quota:" + cloudQuota.get("vcpu") + " ram quota: " + cloudQuota.get("ram") +
+        LOGGER.finest("Debug: vcpu quota:" + cloudQuota.get("vcpu") + " ram quota: " + cloudQuota.get("ram") +
                 " instance quota:" + cloudQuota.get("instance"));
 
         if (flavor != null) {
-            LOGGER.info("Debug: flavor vcpu:" + flavor.get("vcpu") + " flavor ram: " + flavor.get("ram"));
+            LOGGER.finest("Debug: flavor vcpu:" + flavor.get("vcpu") + " flavor ram: " + flavor.get("ram"));
         } else {
-            LOGGER.info("Debug: flavor vcpu:" + plannedVcpu + " flavor ram: " + plannedRam);
+            LOGGER.finest("Debug: flavor vcpu:" + plannedVcpu + " flavor ram: " + plannedRam);
         }
 
         if (totalUsage != null) {
-            LOGGER.info("Debug: current vcpu:" + totalUsage.get("vcpu") + " current ram: " + totalUsage.get("ram") +
+            LOGGER.finest("Debug: current vcpu:" + totalUsage.get("vcpu") + " current ram: " + totalUsage.get("ram") +
                     " current instance:" + totalUsage.get("instance"));
         }
 
@@ -600,11 +600,6 @@ public class JCloudsCloud extends Cloud {
     }
 
     private Quota getQuotaByTenant(NovaApi novaApi, String zone, String tenant) {
-        Iterator iterator = novaApi.getConfiguredZones().iterator();
-        while(iterator.hasNext()) {
-            String z = (String) iterator.next();
-            LOGGER.info("zone: " + z);
-        }
         if (novaApi.getQuotaExtensionForZone(zone).isPresent()) {
             return novaApi.getQuotaExtensionForZone(zone).get().getByTenant(tenant);
         }

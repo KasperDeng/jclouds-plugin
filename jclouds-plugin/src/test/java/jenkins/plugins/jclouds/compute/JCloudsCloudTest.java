@@ -1,17 +1,18 @@
 package jenkins.plugins.jclouds.compute;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Collections;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
 
 import com.gargoylesoftware.htmlunit.WebAssert;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Vijay Kiran
@@ -56,7 +57,7 @@ public class JCloudsCloudTest {
     @Test
     public void testConfigRoundtrip() throws Exception {
 
-        JCloudsCloud original = new JCloudsCloud("aws-profile", "aws-ec2", "identity", "credential", "privateKey", "publicKey", "endPointUrl", 1, 30,
+        JCloudsCloud original = new JCloudsCloud("aws-profile", "aws-ec2", "identity", "credential", "tenantId", "privateKey", "publicKey", "endPointUrl", 1, 30,
                 600 * 1000, 600 * 1000, null, Collections.<JCloudsSlaveTemplate>emptyList());
 
         j.getInstance().clouds.add(original);

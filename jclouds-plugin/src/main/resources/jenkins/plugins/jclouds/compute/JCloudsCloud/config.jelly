@@ -18,8 +18,8 @@
         <f:textbox/>
     </f:entry>
     <f:entry title="tenantId" field="tenantId">
-            <f:textbox/>
-     </f:entry>
+        <f:textbox/>
+    </f:entry>
     <f:entry title="Credential" field="credential">
         <f:password/>
     </f:entry>

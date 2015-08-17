@@ -78,6 +78,10 @@ public class ComputeTestFixture extends BaseComputeServiceContextLiveTest {
         return credential;
     }
 
+    public String getTenantId() {
+        return "tenantId";
+    }
+
     public void setUp() {
         super.setupContext();
     }
