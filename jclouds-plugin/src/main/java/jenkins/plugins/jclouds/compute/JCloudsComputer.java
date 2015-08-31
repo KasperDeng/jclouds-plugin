@@ -1,15 +1,24 @@
 package jenkins.plugins.jclouds.compute;
 
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.logging.Logger;
+
+import javax.servlet.ServletException;
+
+import org.kohsuke.stapler.HttpRedirect;
+import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
+
+import hudson.model.Descriptor;
 import hudson.model.Hudson;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.OfflineCause;
 import hudson.slaves.SlaveComputer;
-
-import java.io.IOException;
-import java.util.logging.Logger;
-
-import org.kohsuke.stapler.HttpRedirect;
-import org.kohsuke.stapler.HttpResponse;
 
 /**
  * JClouds version of Jenkins {@link SlaveComputer} - responsible for terminating an instance.
@@ -25,7 +34,7 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
     }
 
     public String getInstanceId() {
-        return getName();
+        return getNode().getNodeId();
     }
 
     @Override
@@ -41,6 +50,14 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
         return getNode().getCloudName();
     }
 
+    public String getName() {
+        return getNode().getNodeName();
+    }
+
+    public long getRemainRetentionTime() {
+        return getNode().getRemainRetentionTime();
+    }
+
     /**
      * Really deletes the slave, by terminating the instance.
      */
@@ -49,6 +66,29 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
         setTemporarilyOffline(true, OfflineCause.create(Messages._DeletedCause()));
         getNode().setPendingDelete(true);
         return new HttpRedirect("..");
+    }
+
+    @Override
+    public void doConfigSubmit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException,
+            Descriptor.FormException {
+        String endDate = req.getParameter("endDate");//endDate 2015-08-28 03:15
+        Long extendTime;
+        if ("Forever".equalsIgnoreCase(endDate) || "-1".equalsIgnoreCase(endDate)) {
+            getNode().setOverrideRetentionTime(-1);
+        } else {
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            try {
+                Date date = df.parse(endDate + ":00");
+                getNode().setTerminatedMillTime(date.getTime());
+                extendTime = date.getTime() - System.currentTimeMillis();
+                LOGGER.finest("Debug date.getTime(): " + date.getTime() + " extendTime: " + extendTime);
+            } catch (ParseException e) {
+                LOGGER.info("The input terminated date is wrong format!");
+            }
+        }
+
+        // take the user back to the slave top page.
+        rsp.sendRedirect2("../" + getName() + '/');
     }
 
     /**

@@ -47,16 +47,9 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
                     computersToDeleteBuilder.add(comp);
                     ListenableFuture<?> f = executor.submit(new Runnable() {
                         public void run() {
+                            logger.log(Level.INFO, "Deleting pending node " + comp.getName());
                             try {
-                                if (comp.getRetentionTime() != -1) {
-                                    logger.log(Level.INFO, "Deleting pending node " + comp.getName());
-                                    comp.getNode().terminate();
-                                } else {
-                                    // RetentionTime equals -1 means the slave is offline
-                                    // only remove it from jenkins and keep instance in openstack for further use
-                                    logger.log(Level.INFO, "Remove offline node " + comp.getName());
-                                    Jenkins.getInstance().removeNode(comp.getNode());
-                                }
+                                comp.getNode().terminate();
                             } catch (IOException e) {
                                 logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
                             } catch (InterruptedException e) {
@@ -73,10 +66,7 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
 
         for (JCloudsComputer c : computersToDeleteBuilder.build()) {
             try {
-                // RetentionTime equals -1 means the slave is offline
-                if ((c.getNode() != null) && (c.getRetentionTime() != -1)) {
-                    c.deleteSlave();
-                }
+                c.deleteSlave();
             } catch (IOException e) {
                 logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
             } catch (InterruptedException e) {

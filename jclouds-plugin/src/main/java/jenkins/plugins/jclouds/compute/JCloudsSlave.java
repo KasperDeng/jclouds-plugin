@@ -19,6 +19,7 @@ import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
+import hudson.util.TimeUnit2;
 
 /**
  * Jenkins Slave node - managed by JClouds.
@@ -43,6 +44,9 @@ public class JCloudsSlave extends AbstractCloudSlave {
     private final String credentialsId;
 
     private int overrideRetentionTime;
+    private long terminatedMillTime;
+
+    private String publicIpAddress = "";
 
     @DataBoundConstructor
     @SuppressWarnings("rawtypes")
@@ -149,6 +153,70 @@ public class JCloudsSlave extends AbstractCloudSlave {
 
     public void setOverrideRetentionTime(int overrideRetentionTime) {
         this.overrideRetentionTime = overrideRetentionTime;
+        JCloudsUtility.saveSettingToConfig();
+    }
+
+    public long getTerminatedMillTime() {
+        return terminatedMillTime;
+    }
+
+    public void setTerminatedMillTime(long terminatedMillTime) {
+        this.terminatedMillTime = terminatedMillTime;
+
+        long extendTime = terminatedMillTime - System.currentTimeMillis();
+        Long idleTime = System.currentTimeMillis() - getComputer().getIdleStartMilliseconds();
+        Long idleMinTime = TimeUnit2.MILLISECONDS.toMinutes(idleTime);
+        Long extendMinTime = TimeUnit2.MILLISECONDS.toMinutes(extendTime);
+        setOverrideRetentionTime(idleMinTime.intValue() + extendMinTime.intValue());
+        JCloudsUtility.saveSettingToConfig();
+    }
+
+    public String getRetentionDay() {
+        int retentionTime = getRetentionTime();
+        if (retentionTime == -1) {
+            return "Forever";
+        } else {
+            int day = retentionTime / JCloudsConstant.MIN_IN_DAY;
+            int hour = (retentionTime % JCloudsConstant.MIN_IN_DAY)/60;
+            int min = (retentionTime % JCloudsConstant.MIN_IN_DAY)%60;
+            return Integer.toString(day) + " days " + Integer.toString(hour)
+                    + " hours " + Integer.toString(min) + " mins";
+        }
+    }
+
+    public long getRemainRetentionTime() {
+        int retentionTime = getRetentionTime();
+        if (retentionTime == -1) {
+            return retentionTime;
+        } else if (terminatedMillTime != 0) {
+            return terminatedMillTime > System.currentTimeMillis() ? terminatedMillTime - System.currentTimeMillis() : 0;
+        } else {
+            long remainRetentionTime = TimeUnit2.MINUTES.toMillis(retentionTime) -
+                    (System.currentTimeMillis() - getComputer().getIdleStartMilliseconds()) ;
+            return remainRetentionTime > 0 ? remainRetentionTime : 0;
+        }
+    }
+
+    public String getRemainRetentionDay() {
+        int retentionTime = getRetentionTime();
+        if (retentionTime == -1) {
+            return "Forever";
+        } else {
+            int remainingTime;
+            if ((terminatedMillTime != 0) && (terminatedMillTime >= System.currentTimeMillis())) {
+                Long remaining = TimeUnit2.MINUTES.toMillis(terminatedMillTime - System.currentTimeMillis());
+                remainingTime = remaining.intValue();
+            } else {
+                Long idleTime = TimeUnit2.MILLISECONDS.toMinutes(System.currentTimeMillis() -
+                        getComputer().getIdleStartMilliseconds());
+                remainingTime = retentionTime - idleTime.intValue();
+            }
+            int day = remainingTime / JCloudsConstant.MIN_IN_DAY;
+            int hour = (remainingTime % JCloudsConstant.MIN_IN_DAY)/60;
+            int min = (remainingTime % JCloudsConstant.MIN_IN_DAY)%60;
+            return Integer.toString(day) + " days " + Integer.toString(hour)
+                    + " hours " + Integer.toString(min) + " mins";
+        }
     }
 
     public String getNodeId() {
@@ -258,5 +326,13 @@ public class JCloudsSlave extends AbstractCloudSlave {
                 break;
             }
         }
+    }
+
+    public String getPublicIpAddress() {
+        return publicIpAddress;
+    }
+
+    public void setPublicIpAddress(String publicIpAddress) {
+        this.publicIpAddress = publicIpAddress;
     }
 }

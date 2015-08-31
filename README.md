@@ -116,6 +116,12 @@ When the build is complete and succesful, the configured files will be published
      - The button "Check Image Name Regex" is enhanced to show the result with above logic
      - The image cache expired time is changed to 5 mins
   7. The instance clean up thread recurrence period is updated from 5 mins to 1 min
+  8. Set the new name in the description of offline OS instance as well as the label is tagged as OfflineOSInstance
+  9. Create a new page $ROOT/jclouds-offline/ for maintaining the OS offline instances
+ 10. Add public IP address field in JCloudsSlave for saving it into config.xml. It fixes the issue when jenkins restart,
+     the offline slave cannot be re-connected
+ 11. Enhance the jcloud computer configure page with a offline survive time countdown and a calendar for terminated date selection.
+ 12. Use the terminated date instead of retention time, for retention audit. Avoid retention time re-calculation issue when jenkins restart .
 * Config in jenkins global configuration (just highlight some inportant)
   - Cloud (JClouds)
     + tenantId: get help by clicking "?". Get tenantId by CLI: keystone tenant-list. It's used for getting os quota and usage.

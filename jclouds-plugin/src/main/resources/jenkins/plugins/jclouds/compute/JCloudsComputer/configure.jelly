@@ -1,21 +1,68 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout" xmlns:f="/lib/form">
     <l:layout norefresh="true" permission="${app.ADMINISTER}" title="${it.name} Configuration">
         <st:include page="sidepanel.jelly"/>
+        <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery-1.7.2.min.js"></script>
+
+        <link rel="stylesheet" type="text/css" href="${rootURL}/plugin/jclouds-jenkins/css/jquery.countdown.css"/>
+        <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.countdown.js"></script>
+
+        <link rel="stylesheet" type="text/css" href="${rootURL}/plugin/jclouds-jenkins/css/jquery.simple-dtpicker.css"/>
+        <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.simple-dtpicker.js"></script>
+
+        <link rel="stylesheet" href="${resURL}/css/style.css" type="text/css" />
+
         <l:main-panel>
             <f:form method="post" action="configSubmit" name="config">
                 <j:set var="instance" value="${it.node}" />
                 <j:set var="descriptor" value="${instance.descriptor}" />
 
-                <f:entry title="${%Instance ID}" field="instanceId">
-                    <f:textbox />
+                <f:entry title="${%Instance ID}" field="nodeId">
+                    <f:readOnlyTextbox />
+                </f:entry>
+
+                <f:entry title="${%Node Name}" field="name">
+                    <f:readOnlyTextbox value="${it.name}"/>
                 </f:entry>
 
                 <f:entry title="${%Description}" help="/help/system-config/master-slave/description.html">
-                    <f:textbox field="nodeDescription" />
+                    <f:readOnlyTextbox field="nodeDescription" />
                 </f:entry>
 
                 <f:entry title="${%Labels}" field="labelString">
-                    <f:textbox />
+                    <f:readOnlyTextbox />
+                </f:entry>
+
+                <!--<f:entry title="${%Retention Time}" help="${rootURL}/plugin/jclouds-jenkins/help/help-retentionTime.html">
+                    <f:readOnlyTextbox field="retentionDay" />
+                </f:entry>-->
+
+                <f:entry title="${%Remaining dd-hh-mm-ss}" field="remainRetentionTime">
+                    <input type="hidden" id="remainRetentionTime" value="${it.remainRetentionTime}" />
+                    <div id="countdown"></div>
+                    <script type="text/javascript">
+                        var remain = document.getElementById('remainRetentionTime').value;
+                        var newTime = parseInt((new Date()).getTime()) + parseInt(remain);
+                        $('#countdown').countdown({
+                        timestamp	: newTime
+                        });
+                    </script>
+                </f:entry>
+
+                <f:entry title="${%Terminated Time}">
+                    <input type="text" id="endDate" name="endDate" value=""/>
+                    <script type="text/javascript">
+                        $(function(){
+                            $('*[name=endDate]').appendDtpicker({
+                                "inline": false,
+                                "autodateOnStart": false,
+                                "firstDayOfWeek": 1,
+                                "futureOnly": true
+                            });
+                        });
+                    </script>
+                    <f:block>
+                        <f:submit value="Set Terminated Time"/>
+                    </f:block>
                 </f:entry>
 
                 <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}" field="nodeProperties" />

@@ -1,14 +1,13 @@
 package jenkins.plugins.jclouds.compute;
 
-import hudson.model.Descriptor;
-import hudson.slaves.OfflineCause;
-import hudson.slaves.RetentionStrategy;
-import hudson.util.TimeUnit2;
-
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import hudson.model.Descriptor;
+import hudson.slaves.OfflineCause;
+import hudson.slaves.RetentionStrategy;
 
 /**
  * @author Vijay Kiran
@@ -32,8 +31,9 @@ public class JCloudsRetentionStrategy extends RetentionStrategy<JCloudsComputer>
                     final int retentionTime = c.getRetentionTime();
                     // check executor to ensure we are terminating online slaves
                     if (retentionTime > -1 && c.countExecutors() > 0) {
-                        final long idleMilliseconds = System.currentTimeMillis() - c.getIdleStartMilliseconds();
-                        if (idleMilliseconds > TimeUnit2.MINUTES.toMillis(retentionTime)) {
+                        //final long idleMilliseconds = System.currentTimeMillis() - c.getIdleStartMilliseconds();
+                        //if (idleMilliseconds > TimeUnit2.MINUTES.toMillis(retentionTime)) {
+                        if (c.getRemainRetentionTime() == 0) {
                             LOGGER.info("Setting " + c.getName() + " to be deleted.");
                             if (!c.isOffline()) {
                                 c.setTemporarilyOffline(true, OfflineCause.create(Messages._DeletedCause()));

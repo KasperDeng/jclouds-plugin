@@ -1,6 +1,7 @@
 package jenkins.plugins.jclouds.compute;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Map;
 
 import org.jclouds.compute.ComputeService;
@@ -15,6 +16,7 @@ import hudson.model.Result;
 import hudson.slaves.OfflineCause;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
+import hudson.util.ReflectionUtils;
 import shaded.com.google.common.base.Strings;
 
 public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
@@ -40,12 +42,18 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             // Rename that running node with job name and user name
             String buildTag = (String) build.getEnvVars().get("BUILD_TAG");
             final String nodeName;
+            String tempName;
             String buildUser = (String) build.getEnvVars().get("BUILD_USER");
             if (Strings.isNullOrEmpty(buildUser)) {
-                nodeName = buildTag.replaceFirst("jenkins-","").toLowerCase();
+                tempName = buildTag.replaceFirst("jenkins-","").toLowerCase();
             } else {
-                nodeName = (buildTag.replaceFirst("jenkins-","") + "-" + buildUser).toLowerCase();
+                tempName = (buildTag.replaceFirst("jenkins-","") + "-" + buildUser).toLowerCase();
             }
+            String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
+            if (InstancePostAction.OFFLINE_SLAVE.equals(slavePostAction)) {
+                tempName = tempName + "-offline";
+            }
+            nodeName = tempName;
             LOGGER.fine("Rename running node(" + nodeId + ") with name: " + nodeName);
             try {
                 computeService.renameNode(nodeId, nodeName);
@@ -70,9 +78,25 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                         case InstancePostAction.OFFLINE_SLAVE:
                             LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
                                     + "(" + nodeId + ")");
-                            jcloudsSlave.setOverrideRetentionTime(-1);
-                            jcloudsSlave.setPendingDelete(true);
-                            computeService.renameNode(nodeId, nodeName + "-offline");
+                            // default two days (2 * 1440 mins)
+                            jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2880 * JCloudsConstant.MILLISEC_IN_MIN);
+                            //jcloudsSlave.setOverrideRetentionTime(2880);
+                            jcloudsSlave.setLabelString("OfflineOSInstance");
+
+                            Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
+                            if (nodeDescription != null) {
+                                nodeDescription.setAccessible(true);
+                                try {
+                                    nodeDescription.set(jcloudsSlave, nodeName);
+                                } catch (IllegalAccessException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            JCloudsUtility.updateComputerList();
+                            JCloudsUtility.saveSettingToConfig();
+
+                            //jcloudsSlave.setPendingDelete(true);
+                            //computeService.renameNode(nodeId, nodeName + "-offline");
                             break;
                         case InstancePostAction.SUSPEND_SLAVE_JOB_FAILED:
                             Result buildResult = build.getResult();

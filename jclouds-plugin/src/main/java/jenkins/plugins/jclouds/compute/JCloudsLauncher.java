@@ -1,16 +1,16 @@
 package jenkins.plugins.jclouds.compute;
 
-import hudson.model.TaskListener;
-import hudson.model.Descriptor;
-import hudson.slaves.ComputerLauncher;
-import hudson.slaves.SlaveComputer;
-import hudson.plugins.sshslaves.SSHLauncher;
-
 import java.io.IOException;
 import java.io.PrintStream;
 
 import org.jclouds.compute.domain.NodeMetadata;
-import org.jclouds.domain.LoginCredentials;
+
+import hudson.model.Descriptor;
+import hudson.model.TaskListener;
+import hudson.plugins.sshslaves.SSHLauncher;
+import hudson.slaves.ComputerLauncher;
+import hudson.slaves.SlaveComputer;
+import shaded.com.google.common.base.Strings;
 
 /**
  * The launcher that launches the jenkins slave.jar on the Slave. Uses the SSHKeyPair configured in the cloud profile settings, and logs in to the server via
@@ -34,14 +34,22 @@ public class JCloudsLauncher extends ComputerLauncher {
         PrintStream logger = listener.getLogger();
 
         final JCloudsSlave slave = (JCloudsSlave) computer.getNode();
-        final String[] addresses = getConnectionAddresses(slave.getNodeMetaData(), logger);
 
-        slave.waitForPhoneHome(logger);
+        String host = slave.getPublicIpAddress(); // public IP address is saved for offline slave
+        if (Strings.isNullOrEmpty(host)) {
+            final String[] addresses = getConnectionAddresses(slave.getNodeMetaData(), logger);
 
-        String host = addresses[0];
-        if ("0.0.0.0".equals(host)) {
-            logger.println("Invalid host 0.0.0.0, your host is most likely waiting for an ip address.");
-            throw new IOException("goto sleep");
+            slave.waitForPhoneHome(logger);
+
+            host = addresses[0];
+
+            if ("0.0.0.0".equals(host)) {
+                logger.println("Invalid host 0.0.0.0, your host is most likely waiting for an ip address.");
+                throw new IOException("goto sleep");
+            }
+
+            // Save the public IP address for relaunching
+            slave.setPublicIpAddress(host);
         }
 
         SSHLauncher launcher = new SSHLauncher(host, 22, slave.getCredentialsId(), slave.getJvmOptions(), null, "", "", Integer.valueOf(0), null, null);
