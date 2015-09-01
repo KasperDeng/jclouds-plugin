@@ -46,6 +46,7 @@ THE SOFTWARE.
             <st:nbsp/>
             <a href="${url}" class="model-link inside"><b>${n.nodeDescription}</b></a>
             <st:nbsp/>
+            <b>Remain time: ${n.remainRetentionDay}</b>
           </nobr>
           <wbr/>
         </j:forEach>

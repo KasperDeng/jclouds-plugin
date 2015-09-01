@@ -204,7 +204,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
         } else {
             int remainingTime;
             if ((terminatedMillTime != 0) && (terminatedMillTime >= System.currentTimeMillis())) {
-                Long remaining = TimeUnit2.MINUTES.toMillis(terminatedMillTime - System.currentTimeMillis());
+                Long remaining = TimeUnit2.MILLISECONDS.toMinutes(terminatedMillTime - System.currentTimeMillis());
                 remainingTime = remaining.intValue();
             } else {
                 Long idleTime = TimeUnit2.MILLISECONDS.toMinutes(System.currentTimeMillis() -
