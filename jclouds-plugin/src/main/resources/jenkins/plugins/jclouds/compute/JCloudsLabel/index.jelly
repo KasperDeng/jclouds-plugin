@@ -37,19 +37,32 @@ THE SOFTWARE.
       </j:if>
 
       <div>
-        <h2>${%Offline Openstack Nodes}</h2>
-        <j:forEach var="n" items="${it.nodes}">
-          <j:set var="c" value="${app.getComputer(n.nodeName)}"/>
-          <j:set var="url" value="${rootURL}/${c.url}"/>
-          <nobr>
-            <a href="${url}"><img src="${imagesURL}/16x16/${c.icon}" width="16" height="16" alt=""/></a>
-            <st:nbsp/>
-            <a href="${url}" class="model-link inside"><b>${n.nodeDescription}</b></a>
-            <st:nbsp/>
-            <b>Remain time: ${n.remainRetentionDay}</b>
-          </nobr>
-          <wbr/>
-        </j:forEach>
+        <h2>${%Offline Openstack Nodes}, ${%Total Num:} ${it.nodes.size()}</h2>
+        <j:if test="${it.nodes.size() gt 0}">
+          <table class="pane bigtable middle-align" style="width:auto">
+            <tr>
+              <th>Offline Slave Name</th>
+              <th>Time Remaining</th>
+            </tr>
+            <j:forEach var="n" items="${it.nodes}">
+              <j:set var="c" value="${app.getComputer(n.nodeName)}"/>
+              <j:set var="url" value="${rootURL}/${c.url}"/>
+              <tr>
+                <td>
+                  <a href="${url}">
+                    <img src="${imagesURL}/16x16/${c.icon}" width="16" height="16" alt=""/>
+                  </a>
+                  <a href="${url}" class="model-link inside">
+                    <b>${n.nodeDescription}</b>
+                  </a>
+                </td>
+                <td>
+                  <b>${n.remainRetentionDay}</b>
+                </td>
+              </tr>
+            </j:forEach>
+          </table>
+        </j:if>
       </div>
 
     </l:main-panel>
