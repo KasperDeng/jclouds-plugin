@@ -16,9 +16,11 @@ import org.kohsuke.stapler.StaplerResponse;
 
 import hudson.model.Descriptor;
 import hudson.model.Hudson;
+import hudson.model.User;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.OfflineCause;
 import hudson.slaves.SlaveComputer;
+import jenkins.model.Jenkins;
 
 /**
  * JClouds version of Jenkins {@link SlaveComputer} - responsible for terminating an instance.
@@ -63,9 +65,15 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
      */
     @Override
     public HttpResponse doDoDelete() throws IOException {
-        setTemporarilyOffline(true, OfflineCause.create(Messages._DeletedCause()));
-        getNode().setPendingDelete(true);
-        return new HttpRedirect("..");
+        User user = Jenkins.getInstance().getMe();
+
+        if ((getNode().getNodeDescription().contains(user.getFullName())) || (Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER))) {
+            setTemporarilyOffline(true, OfflineCause.create(Messages._DeletedCause()));
+            getNode().setPendingDelete(true);
+            return new HttpRedirect("..");
+        }
+        throw new IOException("You don't have privilege to delete the offline slave " + getNode().getNodeName() +
+                ":" + getNode().getNodeDescription() + " not of you!");
     }
 
     @Override
