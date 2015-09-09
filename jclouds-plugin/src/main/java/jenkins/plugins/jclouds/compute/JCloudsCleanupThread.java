@@ -58,6 +58,13 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
                         }
                     });
                     deletedNodesBuilder.add(f);
+                } else if (c.getChannel() == null) {
+                    logger.log(Level.SEVERE, "Null connection channel in orphan node, terminate it!");
+                    try {
+                        ((JCloudsComputer) c).getNode().terminate();
+                    } catch (Exception e1) {
+                        logger.log(Level.SEVERE, "Exceptions in orphan node termination!");
+                    }
                 }
             }
         }
