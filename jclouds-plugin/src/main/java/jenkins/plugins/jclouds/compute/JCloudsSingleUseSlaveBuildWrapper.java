@@ -54,7 +54,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                 tempName = tempName + "-offline";
             }
             nodeName = tempName;
-            LOGGER.fine("Rename running node(" + nodeId + ") with name: " + nodeName);
+            LOGGER.info("Rename running node(" + nodeId + ") with name: " + nodeName);
             try {
                 computeService.renameNode(nodeId, nodeName);
             } catch (Exception e) {

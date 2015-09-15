@@ -58,8 +58,9 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
                         }
                     });
                     deletedNodesBuilder.add(f);
-                } else if (c.getChannel() == null) {
-                    logger.log(Level.SEVERE, "Null connection channel in orphan node, terminate it!");
+                } else if ((c.getChannel() == null) && ("OfflineOSInstance".equals(c.getNode().getLabelString()))) {
+                    logger.log(Level.SEVERE, "Null connection channel in orphan offline node, terminate " +
+                            c.getNode().getNodeName() + ":" + c.getNode().getNodeDescription());
                     try {
                         ((JCloudsComputer) c).getNode().terminate();
                     } catch (Exception e1) {
