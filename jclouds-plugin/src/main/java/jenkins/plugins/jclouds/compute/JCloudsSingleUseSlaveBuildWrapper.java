@@ -81,7 +81,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                             // default two days (2 * 1440 mins)
                             jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2880 * JCloudsConstant.MILLISEC_IN_MIN);
                             //jcloudsSlave.setOverrideRetentionTime(2880);
-                            jcloudsSlave.setLabelString("OfflineOSInstance");
+                            jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
 
                             Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
                             if (nodeDescription != null) {

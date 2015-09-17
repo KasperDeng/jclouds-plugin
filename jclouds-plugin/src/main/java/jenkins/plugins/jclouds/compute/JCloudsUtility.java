@@ -1,15 +1,33 @@
 package jenkins.plugins.jclouds.compute;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.StringTokenizer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+
+import hudson.tasks.Mailer;
 import hudson.util.ReflectionUtils;
 import jenkins.model.Jenkins;
+import jenkins.model.JenkinsLocationConfiguration;
 
 /**
  * Class for some jenkins utilities by reflection
  */
 public class JCloudsUtility {
+    private static final Logger LOGGER = Logger.getLogger(JCloudsUtility.class.getName());
+
     /**
      * Save jenkins setting to the config.xml
      */
@@ -34,6 +52,31 @@ public class JCloudsUtility {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static void sendEmail(String emailAddress, String emailSubject, StringBuilder emailContent) {
+        String charset = "UTF-8";
+        MimeMessage mail = new MimeMessage(Jenkins.getInstance().getDescriptorByType(Mailer.DescriptorImpl.class).
+                createSession());
+        String address = new StringTokenizer(emailAddress).nextToken();
+        try {
+            mail.setContent("", "text/plain");
+            mail.setFrom(Mailer.StringToAddress(JenkinsLocationConfiguration.get().getAdminAddress(), charset));
+            mail.setSentDate(new Date());
+            Set<InternetAddress> rcp = new LinkedHashSet<InternetAddress>();
+            rcp.add(Mailer.StringToAddress(address, charset));
+            mail.setRecipients(Message.RecipientType.TO, rcp.toArray(new InternetAddress[rcp.size()]));
+            mail.setSubject(emailSubject, charset);
+            mail.setText(emailContent.toString(), charset);
+            Transport.send(mail);
+            LOGGER.log(Level.INFO, "Offline OS Instance Being Timeout Notification is sent to " + address);
+        } catch (AddressException e) {
+            LOGGER.log(Level.SEVERE, "Unable to send to address: " + address + '\n'+ e);
+        } catch (MessagingException e) {
+            LOGGER.log(Level.SEVERE, "Unable to send to address: " + address + '\n' + e);
+        } catch (UnsupportedEncodingException e) {
+            LOGGER.log(Level.SEVERE, "Unable to send to address: " + address + '\n' + e);
         }
     }
 }

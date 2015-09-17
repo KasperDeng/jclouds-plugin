@@ -47,6 +47,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
     private long terminatedMillTime;
 
     private String publicIpAddress = "";
+    private Boolean isEmailNotified = false;
 
     @DataBoundConstructor
     @SuppressWarnings("rawtypes")
@@ -168,6 +169,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
         Long idleMinTime = TimeUnit2.MILLISECONDS.toMinutes(idleTime);
         Long extendMinTime = TimeUnit2.MILLISECONDS.toMinutes(extendTime);
         setOverrideRetentionTime(idleMinTime.intValue() + extendMinTime.intValue());
+        isEmailNotified = false;
         JCloudsUtility.saveSettingToConfig();
     }
 
@@ -217,6 +219,19 @@ public class JCloudsSlave extends AbstractCloudSlave {
             return Integer.toString(day) + " days " + Integer.toString(hour)
                     + " hours " + Integer.toString(min) + " mins";
         }
+    }
+
+    public Boolean isEmailNotified() {
+        return isEmailNotified;
+    }
+
+    public void setIsEmailNotified(Boolean isEmailNotified) {
+        this.isEmailNotified = isEmailNotified;
+        JCloudsUtility.saveSettingToConfig();
+    }
+
+    public Boolean isOfflineOsInstance() {
+        return getLabelString().equals(JCloudsConstant.OFFLINE_LABEL);
     }
 
     public String getNodeId() {
