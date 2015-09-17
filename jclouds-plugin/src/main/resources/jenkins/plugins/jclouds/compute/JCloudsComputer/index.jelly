@@ -112,25 +112,27 @@ THE SOFTWARE.
                 </div>
             </j:if>
 
-            <div>
-                <h2>${%Remaining dd:hh:mm:ss}</h2>
-                <input type="hidden" id="remainRetentionTime" value="${it.node.remainRetentionTime}"/>
-                <div id="countdown"></div>
-                <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery-1.7.2.min.js"></script>
-                <link rel="stylesheet" type="text/css"
-                      href="${rootURL}/plugin/jclouds-jenkins/css/jquery.countdown.css"/>
-                <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.countdown.js"></script>
-                <script type="text/javascript">
-                    $.noConflict();
-                    jQuery( document ).ready(function($) {
-                        var remain = document.getElementById('remainRetentionTime').value;
-                        var newTime = parseInt((new Date()).getTime()) + parseInt(remain);
-                        $('#countdown').countdown({
-                            timestamp : newTime
-                        });
-                    })
-                </script>
-            </div>
+            <j:if test="${it.node.isOfflineOsInstance()}">
+                <div>
+                    <h2>${%Remaining dd:hh:mm:ss}</h2>
+                    <input type="hidden" id="remainRetentionTime" value="${it.node.remainRetentionTime}"/>
+                    <div id="countdown"></div>
+                    <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery-1.7.2.min.js"></script>
+                    <link rel="stylesheet" type="text/css"
+                          href="${rootURL}/plugin/jclouds-jenkins/css/jquery.countdown.css"/>
+                    <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.countdown.js"></script>
+                    <script type="text/javascript">
+                        $.noConflict();
+                        jQuery( document ).ready(function($) {
+                            var remain = document.getElementById('remainRetentionTime').value;
+                            var newTime = parseInt((new Date()).getTime()) + parseInt(remain);
+                            $('#countdown').countdown({
+                                timestamp : newTime
+                            });
+                        })
+                    </script>
+                </div>
+            </j:if>
 
             <st:include page="nodepropertysummaries.jelly"/>
 

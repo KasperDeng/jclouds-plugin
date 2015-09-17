@@ -27,47 +27,49 @@
                     <f:readOnlyTextbox field="retentionDay" />
                 </f:entry>-->
 
-                <f:entry title="${%Remaining dd:hh:mm:ss}" field="remainRetentionTime">
-                    <input type="hidden" id="remainRetentionTime" value="${it.remainRetentionTime}" />
-                    <div id="countdown"></div>
-                    <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery-1.7.2.min.js"></script>
-                    <link rel="stylesheet" type="text/css" href="${rootURL}/plugin/jclouds-jenkins/css/jquery.countdown.css"/>
-                    <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.countdown.js"></script>
-                    <script type="text/javascript">
-                        $.noConflict();
-                        jQuery( document ).ready(function($) {
-                            var remain = document.getElementById('remainRetentionTime').value;
-                            var newTime = parseInt((new Date()).getTime()) + parseInt(remain);
-                            $('#countdown').countdown({
-                                timestamp : newTime
-                            });
-                        })
-                    </script>
-                </f:entry>
-
-                <f:entry title="${%Terminated Time}">
-                    <input type="text" id="endDate" name="endDate" value=""/>
-                    <div>
+                <j:if test="${it.node.isOfflineOsInstance()}">
+                    <f:entry title="${%Remaining dd:hh:mm:ss}" field="remainRetentionTime">
+                        <input type="hidden" id="remainRetentionTime" value="${it.remainRetentionTime}" />
+                        <div id="countdown"></div>
                         <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery-1.7.2.min.js"></script>
-                        <link rel="stylesheet" type="text/css"
-                              href="${rootURL}/plugin/jclouds-jenkins/css/jquery.simple-dtpicker.css"/>
-                        <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.simple-dtpicker.js"></script>
+                        <link rel="stylesheet" type="text/css" href="${rootURL}/plugin/jclouds-jenkins/css/jquery.countdown.css"/>
+                        <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.countdown.js"></script>
                         <script type="text/javascript">
                             $.noConflict();
                             jQuery( document ).ready(function($) {
-                                $('*[name=endDate]').appendDtpicker({
-                                    "inline": false,
-                                    "autodateOnStart": false,
-                                    "firstDayOfWeek": 1,
-                                    "futureOnly": true
-                                    });
-                            });
+                                var remain = document.getElementById('remainRetentionTime').value;
+                                var newTime = parseInt((new Date()).getTime()) + parseInt(remain);
+                                $('#countdown').countdown({
+                                    timestamp : newTime
+                                });
+                            })
                         </script>
-                    </div>
-                    <f:block>
-                        <f:submit value="Set Terminated Time"/>
-                    </f:block>
-                </f:entry>
+                    </f:entry>
+
+                    <f:entry title="${%Terminated Time}">
+                        <input type="text" id="endDate" name="endDate" value=""/>
+                        <div>
+                            <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery-1.7.2.min.js"></script>
+                            <link rel="stylesheet" type="text/css"
+                                  href="${rootURL}/plugin/jclouds-jenkins/css/jquery.simple-dtpicker.css"/>
+                            <script src="${rootURL}/plugin/jclouds-jenkins/js/jquery.simple-dtpicker.js"></script>
+                            <script type="text/javascript">
+                                $.noConflict();
+                                jQuery( document ).ready(function($) {
+                                    $('*[name=endDate]').appendDtpicker({
+                                        "inline": false,
+                                        "autodateOnStart": false,
+                                        "firstDayOfWeek": 1,
+                                        "futureOnly": true
+                                        });
+                                });
+                            </script>
+                        </div>
+                        <f:block>
+                            <f:submit value="Set Terminated Time"/>
+                        </f:block>
+                    </f:entry>
+                </j:if>
 
                 <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}" field="nodeProperties" />
 
