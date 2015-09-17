@@ -231,7 +231,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
     }
 
     public Boolean isOfflineOsInstance() {
-        return getLabelString().equals(JCloudsConstant.OFFLINE_LABEL);
+        return JCloudsConstant.OFFLINE_LABEL.equals(getLabelString());
     }
 
     public String getNodeId() {
