@@ -70,7 +70,7 @@ public class JCloudsUtility {
             mail.setSubject(emailSubject, charset);
             mail.setText(emailContent.toString(), charset);
             Transport.send(mail);
-            LOGGER.log(Level.INFO, "Offline OS Instance Being Timeout Notification is sent to " + address);
+            LOGGER.log(Level.INFO, "Email: " +  emailSubject + " is sent to " + address);
         } catch (AddressException e) {
             LOGGER.log(Level.SEVERE, "Unable to send to address: " + address + '\n'+ e);
         } catch (MessagingException e) {
