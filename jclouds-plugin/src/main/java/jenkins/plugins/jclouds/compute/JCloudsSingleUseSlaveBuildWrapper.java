@@ -73,33 +73,18 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                     c.setTemporarilyOffline(true, OfflineCause.create(Messages._OneOffCause()));
 
                     String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
+                    Result buildResult = build.getResult();
                     if (!Strings.isNullOrEmpty(slavePostAction)) {
                         switch (slavePostAction) {
                         case InstancePostAction.OFFLINE_SLAVE:
-                            LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
-                                    + "(" + nodeId + ")");
-                            // default two days (2 * 1440 mins)
-                            jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2880 * JCloudsConstant.MILLISEC_IN_MIN);
-                            //jcloudsSlave.setOverrideRetentionTime(2880);
-                            jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
-
-                            Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
-                            if (nodeDescription != null) {
-                                nodeDescription.setAccessible(true);
-                                try {
-                                    nodeDescription.set(jcloudsSlave, nodeName);
-                                } catch (IllegalAccessException e) {
-                                    e.printStackTrace();
-                                }
+                            offlineSlave(jcloudsSlave, nodeId, nodeName);
+                            break;
+                        case InstancePostAction.OFFLINE_SLAVE_JOB_FAILED:
+                            if (buildResult == Result.UNSTABLE || buildResult == Result.FAILURE) {
+                                offlineSlave(jcloudsSlave, nodeId, nodeName);
                             }
-                            JCloudsUtility.updateComputerList();
-                            JCloudsUtility.saveSettingToConfig();
-
-                            //jcloudsSlave.setPendingDelete(true);
-                            //computeService.renameNode(nodeId, nodeName + "-offline");
                             break;
                         case InstancePostAction.SUSPEND_SLAVE_JOB_FAILED:
-                            Result buildResult = build.getResult();
                             if (buildResult == Result.UNSTABLE || buildResult != Result.FAILURE) {
                                 LOGGER.info("Suspend slave " + jcloudsSlave.getDisplayName() + "(" + nodeId + ") when job failed");
                                 jcloudsSlave.setOverrideRetentionTime(-1);
@@ -123,6 +108,30 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             return new Environment() {
             };
         }
+    }
+
+    private void offlineSlave(JCloudsSlave jcloudsSlave, String nodeId, String nodeName) throws IOException {
+        LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
+                + "(" + nodeId + ")");
+        // default two days (2 * 1440 mins)
+        jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2 * JCloudsConstant.MILLISEC_IN_DAY);
+        //jcloudsSlave.setOverrideRetentionTime(2880);
+        jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
+
+        Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
+        if (nodeDescription != null) {
+            nodeDescription.setAccessible(true);
+            try {
+                nodeDescription.set(jcloudsSlave, nodeName);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        JCloudsUtility.updateComputerList();
+        JCloudsUtility.saveSettingToConfig();
+
+        //jcloudsSlave.setPendingDelete(true);
+        //computeService.renameNode(nodeId, nodeName + "-offline");
     }
 
     @Extension
