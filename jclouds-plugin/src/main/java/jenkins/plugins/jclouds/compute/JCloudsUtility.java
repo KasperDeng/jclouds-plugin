@@ -17,6 +17,7 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import hudson.model.User;
 import hudson.tasks.Mailer;
 import hudson.util.ReflectionUtils;
 import jenkins.model.Jenkins;
@@ -27,6 +28,21 @@ import jenkins.model.JenkinsLocationConfiguration;
  */
 public class JCloudsUtility {
     private static final Logger LOGGER = Logger.getLogger(JCloudsUtility.class.getName());
+
+    /**
+     * Check current user whether is administrator
+     */
+    public static Boolean isAdmin() {
+        return Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER);
+    }
+
+    /**
+     * Get current user name
+     */
+    public static String getCurrentUserName() {
+        User user = Jenkins.getInstance().getMe();
+        return user.getFullName().toLowerCase();
+    }
 
     /**
      * Save jenkins setting to the config.xml

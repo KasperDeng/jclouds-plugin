@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.HttpRedirect;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.StaplerRequest;
@@ -16,11 +17,9 @@ import org.kohsuke.stapler.StaplerResponse;
 
 import hudson.model.Descriptor;
 import hudson.model.Hudson;
-import hudson.model.User;
 import hudson.slaves.AbstractCloudComputer;
 import hudson.slaves.OfflineCause;
 import hudson.slaves.SlaveComputer;
-import jenkins.model.Jenkins;
 
 /**
  * JClouds version of Jenkins {@link SlaveComputer} - responsible for terminating an instance.
@@ -65,9 +64,7 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
      */
     @Override
     public HttpResponse doDoDelete() throws IOException {
-        User user = Jenkins.getInstance().getMe();
-
-        if ((getNode().getNodeDescription().contains(user.getFullName())) || (Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER))) {
+        if (isNodeOwner() || JCloudsUtility.isAdmin()) {
             setTemporarilyOffline(true, OfflineCause.create(Messages._DeletedCause()));
             getNode().setPendingDelete(true);
             return new HttpRedirect("..");
@@ -80,16 +77,15 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
     public void doConfigSubmit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException,
             Descriptor.FormException {
         String endDate = req.getParameter("endDate");//endDate 2015-08-28 03:15
-        Long extendTime;
         if ("Forever".equalsIgnoreCase(endDate) || "-1".equalsIgnoreCase(endDate)) {
             getNode().setOverrideRetentionTime(-1);
         } else {
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             try {
-                Date date = df.parse(endDate + ":00");
-                getNode().setTerminatedMillTime(date.getTime());
-                extendTime = date.getTime() - System.currentTimeMillis();
-                LOGGER.finest("Debug date.getTime(): " + date.getTime() + " extendTime: " + extendTime);
+                Date newTerminatedDate = df.parse(endDate + ":00");
+                getNode().setTerminatedMillTime(newTerminatedDate.getTime());
+                Long extendTime = newTerminatedDate.getTime() - System.currentTimeMillis();
+                LOGGER.info("Debug date.getTime(): " + newTerminatedDate.getTime() + " extendTime: " + extendTime);
             } catch (ParseException e) {
                 LOGGER.info("The input terminated date is wrong format!");
             }
@@ -108,7 +104,8 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
         JCloudsSlave slave = getNode();
 
         // Slave already deleted
-        if (slave == null) return;
+        if (slave == null)
+            return;
 
         LOGGER.info("Terminating " + getName() + " slave");
 
@@ -117,5 +114,14 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
         }
         slave.terminate();
         Hudson.getInstance().removeNode(slave);
+    }
+
+    /**
+     * To check the node whether belongs to current user
+     */
+    private Boolean isNodeOwner() {
+        String nodeDesc = getNode().getNodeDescription();
+        String userName = JCloudsUtility.getCurrentUserName();
+        return StringUtils.containsIgnoreCase(nodeDesc, userName);
     }
 }

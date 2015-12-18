@@ -29,7 +29,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
 
     @Override
     public Environment setUp(final AbstractBuild build, Launcher launcher, final BuildListener listener) {
-        LOGGER.finest("Debug: Start single-use slave Extension setup");
+        LOGGER.info("Debug: Start single-use slave Extension setup");
 
         if (JCloudsComputer.class.isInstance(build.getExecutor().getOwner())) {
             // Get current running node
@@ -40,31 +40,18 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             final ComputeService computeService = jcloudsCloud.getCompute();
 
             // Rename that running node with job name and user name
-            String buildTag = (String) build.getEnvVars().get("BUILD_TAG");
-            final String nodeName;
-            String tempName;
-            String buildUser = (String) build.getEnvVars().get("BUILD_USER");
-            if (Strings.isNullOrEmpty(buildUser)) {
-                tempName = buildTag.replaceFirst("jenkins-","").toLowerCase();
-            } else {
-                tempName = (buildTag.replaceFirst("jenkins-","") + "-" + buildUser).toLowerCase();
-            }
-            String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
-            if (InstancePostAction.OFFLINE_SLAVE.equals(slavePostAction)) {
-                tempName = tempName + "-offline";
-            }
-            nodeName = tempName;
-            LOGGER.info("Rename running node(" + nodeId + ") with name: " + nodeName);
+            final String newNodeName = assignNewNodeName(build);
+            LOGGER.info("Rename running node(" + nodeId + ") with name: " + newNodeName);
             try {
-                computeService.renameNode(nodeId, nodeName);
+                computeService.renameNode(nodeId, newNodeName);
             } catch (Exception e) {
-                LOGGER.warning("Failed to rename the node to: " + nodeName + "\n" + e);
+                LOGGER.warning("Failed to rename the node to: " + newNodeName + "\n" + e);
             }
 
             return new Environment() {
                 @Override
                 public void buildEnvVars(Map<String, String> env) {
-                    env.put("JENKINS_NODE_NAME", nodeName);
+                    env.put("JENKINS_NODE_NAME", newNodeName);
                 }
 
                 @Override
@@ -73,33 +60,18 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                     c.setTemporarilyOffline(true, OfflineCause.create(Messages._OneOffCause()));
 
                     String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
+                    Result buildResult = build.getResult();
                     if (!Strings.isNullOrEmpty(slavePostAction)) {
                         switch (slavePostAction) {
                         case InstancePostAction.OFFLINE_SLAVE:
-                            LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
-                                    + "(" + nodeId + ")");
-                            // default two days (2 * 1440 mins)
-                            jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2880 * JCloudsConstant.MILLISEC_IN_MIN);
-                            //jcloudsSlave.setOverrideRetentionTime(2880);
-                            jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
-
-                            Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
-                            if (nodeDescription != null) {
-                                nodeDescription.setAccessible(true);
-                                try {
-                                    nodeDescription.set(jcloudsSlave, nodeName);
-                                } catch (IllegalAccessException e) {
-                                    e.printStackTrace();
-                                }
+                            offlineSlave(jcloudsSlave, nodeId, newNodeName);
+                            break;
+                        case InstancePostAction.OFFLINE_SLAVE_JOB_FAILED:
+                            if (buildResult == Result.UNSTABLE || buildResult == Result.FAILURE) {
+                                offlineSlave(jcloudsSlave, nodeId, newNodeName);
                             }
-                            JCloudsUtility.updateComputerList();
-                            JCloudsUtility.saveSettingToConfig();
-
-                            //jcloudsSlave.setPendingDelete(true);
-                            //computeService.renameNode(nodeId, nodeName + "-offline");
                             break;
                         case InstancePostAction.SUSPEND_SLAVE_JOB_FAILED:
-                            Result buildResult = build.getResult();
                             if (buildResult == Result.UNSTABLE || buildResult != Result.FAILURE) {
                                 LOGGER.info("Suspend slave " + jcloudsSlave.getDisplayName() + "(" + nodeId + ") when job failed");
                                 jcloudsSlave.setOverrideRetentionTime(-1);
@@ -112,7 +84,8 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                             //computeService.suspendNode(nodeId);
                             break;
                         default:
-                            //Nothing to do if to destroy the node, let it do by cleanup thread
+                            // Default to destroy the node, nothing to do and just log it and
+                            // let the node being cleaned by cleanup thread
                             LOGGER.info("To delete slave " + jcloudsSlave.getDisplayName() + "(" + nodeId + ")");
                         }
                     }
@@ -123,6 +96,43 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             return new Environment() {
             };
         }
+    }
+
+    private void offlineSlave(JCloudsSlave jcloudsSlave, String nodeId, String nodeName) throws IOException {
+        LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
+                + "(" + nodeId + ")");
+        // default retention: two days (2 * 1440 mins)
+        jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2 * JCloudsConstant.MILLISEC_IN_DAY);
+        jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
+
+        Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
+        if (nodeDescription != null) {
+            nodeDescription.setAccessible(true);
+            try {
+                nodeDescription.set(jcloudsSlave, nodeName);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        JCloudsUtility.updateComputerList();
+        JCloudsUtility.saveSettingToConfig();
+    }
+
+    private String assignNewNodeName(AbstractBuild build) {
+        final String offlineSuffix = "-offline";
+        String buildTag = (String) build.getEnvVars().get("BUILD_TAG");
+        String nodeName;
+        String buildUser = (String) build.getEnvVars().get("BUILD_USER");
+        if (Strings.isNullOrEmpty(buildUser)) {
+            nodeName = buildTag.replaceFirst("jenkins-","").toLowerCase();
+        } else {
+            nodeName = (buildTag.replaceFirst("jenkins-","") + "-" + buildUser).toLowerCase();
+        }
+        String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
+        if (InstancePostAction.OFFLINE_SLAVE.equals(slavePostAction)) {
+            nodeName = nodeName + offlineSuffix;
+        }
+        return nodeName;
     }
 
     @Extension
