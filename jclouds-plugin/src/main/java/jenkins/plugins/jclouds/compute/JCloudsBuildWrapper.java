@@ -19,7 +19,6 @@ import hudson.model.BuildListener;
 import hudson.model.Computer;
 import hudson.model.ParametersAction;
 import hudson.model.Result;
-import hudson.model.User;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import jenkins.plugins.jclouds.compute.internal.NodePlan;
@@ -75,11 +74,6 @@ public class JCloudsBuildWrapper extends BuildWrapper {
                 String templateName = Util.replaceMacro(instance.getActualTemplateName(), build.getBuildVariableResolver());
                 // String templateName = getParameterString(parameters, instance.getActualTemplateName(), build);
                 Supplier<NodeMetadata> nodeSupplier = JCloudsCloud.getByName(cloudName).getTemplate(templateName);
-
-                // set job name and current user name to cloud template for creating instance
-                JCloudsSlaveTemplate jCloudsSlaveTemplate = (JCloudsSlaveTemplate) nodeSupplier;
-                jCloudsSlaveTemplate.displayName = (build.getProject().getFullName() + "-" + User.current().toString()).toLowerCase();
-                LOGGER.info("Use name: " + jCloudsSlaveTemplate.displayName + " for creating instance");
 
                 // take the hit here, as opposed to later
                 computeCache.getUnchecked(cloudName);

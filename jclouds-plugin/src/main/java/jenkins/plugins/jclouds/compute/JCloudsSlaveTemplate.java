@@ -76,8 +76,6 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
     private static final Logger LOGGER = Logger.getLogger(JCloudsSlaveTemplate.class.getName());
     private static final char SEPARATOR_CHAR = ',';
 
-    public transient String displayName;
-
     public final String name;
     public final String imageId;
     public final String imageNameRegex;
@@ -377,13 +375,7 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
         NodeMetadata nodeMetadata = null;
 
         try {
-            LOGGER.info("Using displayName " + displayName + " to create instance");
-            if(Strings.isNullOrEmpty(displayName)) {
-                displayName = name;
-            }
-            nodeMetadata = getOnlyElement(getCloud().getCompute().createNodesInGroup(displayName, 1, template));
-            // setback to null
-            displayName = null;
+            nodeMetadata = getOnlyElement(getCloud().getCompute().createNodesInGroup(name, 1, template));
         } catch (RunNodesException e) {
             throw destroyBadNodesAndPropagate(e);
         }

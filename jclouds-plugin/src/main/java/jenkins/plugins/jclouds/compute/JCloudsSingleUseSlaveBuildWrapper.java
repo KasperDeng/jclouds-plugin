@@ -3,10 +3,12 @@ package jenkins.plugins.jclouds.compute;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.logging.Level;
 
 import org.jclouds.compute.ComputeService;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -16,6 +18,7 @@ import hudson.model.Result;
 import hudson.slaves.OfflineCause;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
+import hudson.util.LogTaskListener;
 import hudson.util.ReflectionUtils;
 import shaded.com.google.common.base.Strings;
 
@@ -40,17 +43,20 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             final ComputeService computeService = jcloudsCloud.getCompute();
 
             // Rename that running node with job name and user name
-            final String newNodeName = assignNewNodeName(build);
-            LOGGER.info("Rename running node(" + nodeId + ") with name: " + newNodeName);
+            final String newNodeName = getNewNodeName(build);
+            LOGGER.info("Got newNodeName " + newNodeName + " for running node(" + nodeId + ")");
             try {
-                computeService.renameNode(nodeId, newNodeName);
+                computeService.renameNode(nodeId, newNodeName); // have inside checkNotNull for input newNodeName
             } catch (Exception e) {
-                LOGGER.warning("Failed to rename the node to: " + newNodeName + "\n" + e);
+                LOGGER.warning("Failed to rename the node.\n" + e);
             }
 
             return new Environment() {
                 @Override
                 public void buildEnvVars(Map<String, String> env) {
+                    if (Strings.isNullOrEmpty(newNodeName)) {
+                        return;
+                    }
                     env.put("JENKINS_NODE_NAME", newNodeName);
                 }
 
@@ -59,7 +65,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
                     // single-use slave, set to offline to prevent from reusing
                     c.setTemporarilyOffline(true, OfflineCause.create(Messages._OneOffCause()));
 
-                    String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
+                    String slavePostAction = getJenkinsEnv(build).get("slavePostAction");
                     Result buildResult = build.getResult();
                     if (!Strings.isNullOrEmpty(slavePostAction)) {
                         switch (slavePostAction) {
@@ -105,31 +111,55 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
         jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2 * JCloudsConstant.MILLISEC_IN_DAY);
         jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
 
-        Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
-        if (nodeDescription != null) {
-            nodeDescription.setAccessible(true);
-            try {
-                nodeDescription.set(jcloudsSlave, nodeName);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
+        if (!Strings.isNullOrEmpty(nodeName)) {
+            Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
+            if (nodeDescription != null) {
+                nodeDescription.setAccessible(true);
+                try {
+                    nodeDescription.set(jcloudsSlave, nodeName);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
             }
         }
         JCloudsUtility.updateComputerList();
         JCloudsUtility.saveSettingToConfig();
     }
 
-    private String assignNewNodeName(AbstractBuild build) {
-        final String offlineSuffix = "-offline";
-        String buildTag = (String) build.getEnvVars().get("BUILD_TAG");
-        String nodeName;
-        String buildUser = (String) build.getEnvVars().get("BUILD_USER");
-        if (Strings.isNullOrEmpty(buildUser)) {
-            nodeName = buildTag.replaceFirst("jenkins-","").toLowerCase();
-        } else {
-            nodeName = (buildTag.replaceFirst("jenkins-","") + "-" + buildUser).toLowerCase();
+    private EnvVars getJenkinsEnv(AbstractBuild build) throws IOException, InterruptedException {
+        EnvVars env = build.getEnvironment(new LogTaskListener(LOGGER, Level.INFO));
+        return env;
+    }
+
+    private String getNewNodeName(AbstractBuild build) {
+        EnvVars env;
+        try {
+            env = getJenkinsEnv(build);
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Failed to get build environment", e);
+            return null;
+        } catch (InterruptedException e) {
+            LOGGER.log(Level.SEVERE, "Failed to get build environment", e);
+            return null;
         }
-        String slavePostAction = (String) build.getEnvVars().get("slavePostAction");
+        String newNodeName = constructNodeName(env);
+        return newNodeName;
+    }
+
+    private String constructNodeName(EnvVars env) {
+        String buildTag = env.get("BUILD_TAG");
+        if (Strings.isNullOrEmpty(buildTag)){
+            LOGGER.log(Level.SEVERE, "Failed to get BUILD_USER environment during assign new node name to slave");
+            return null;
+        }
+        String nodeName = buildTag.replaceFirst("jenkins-","").toLowerCase();
+        String buildUser = env.get("BUILD_USER");
+        if (!Strings.isNullOrEmpty(buildUser)) {
+            nodeName = (nodeName + "-" + buildUser).toLowerCase();
+        }
+        String slavePostAction = env.get("slavePostAction");
         if (InstancePostAction.OFFLINE_SLAVE.equals(slavePostAction)) {
+            final String offlineSuffix = "-offline";
             nodeName = nodeName + offlineSuffix;
         }
         return nodeName;
