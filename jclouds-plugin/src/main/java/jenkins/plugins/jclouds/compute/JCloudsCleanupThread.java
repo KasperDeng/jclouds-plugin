@@ -1,9 +1,14 @@
 package jenkins.plugins.jclouds.compute;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Callable;
 import java.util.logging.Level;
 
+import org.apache.commons.io.FileUtils;
+
 import shaded.com.google.common.collect.ImmutableList;
+import shaded.com.google.common.util.concurrent.FutureCallback;
 import shaded.com.google.common.util.concurrent.Futures;
 import shaded.com.google.common.util.concurrent.ListenableFuture;
 import shaded.com.google.common.util.concurrent.ListeningExecutorService;
@@ -45,16 +50,30 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
                 if (((JCloudsComputer) c).getNode().isPendingDelete()) {
                     final JCloudsComputer comp = (JCloudsComputer) c;
                     computersToDeleteBuilder.add(comp);
-                    ListenableFuture<?> f = executor.submit(new Runnable() {
-                        public void run() {
+                    ListenableFuture<?> f = executor.submit(new Callable<String>() {
+                        public String call() {
                             logger.log(Level.INFO, "Deleting pending node " + comp.getName());
                             try {
+                                String nodeName = comp.getNode().getNodeName();
                                 comp.getNode().terminate();
+                                return nodeName;
                             } catch (IOException e) {
                                 logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
                             } catch (InterruptedException e) {
                                 logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
                             }
+                            return null;
+                        }
+                    });
+                    Futures.addCallback(f, new FutureCallback<Object>() {
+                        @Override
+                        public void onSuccess(Object nodeName) {
+                            deleteSlaveLog((String) nodeName);
+                        }
+
+                        @Override
+                        public void onFailure(Throwable throwable) {
+
                         }
                     });
                     deletedNodesBuilder.add(f);
@@ -82,5 +101,14 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
             }
 
         }
+    }
+
+    /**
+     * Delete the slave log, especially when slave terminated.
+     * For saving disk space.
+     */
+    private void deleteSlaveLog(String nodeName) {
+        String logPath = Jenkins.getInstance().getRootDir() + "/logs/slaves/" + nodeName;
+        FileUtils.deleteQuietly(new File(logPath));
     }
 }
