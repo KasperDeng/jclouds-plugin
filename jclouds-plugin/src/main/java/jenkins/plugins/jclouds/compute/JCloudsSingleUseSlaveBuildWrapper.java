@@ -1,7 +1,6 @@
 package jenkins.plugins.jclouds.compute;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.logging.Level;
 
@@ -19,11 +18,13 @@ import hudson.slaves.OfflineCause;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.LogTaskListener;
-import hudson.util.ReflectionUtils;
 import shaded.com.google.common.base.Strings;
 
 public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
     private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(JCloudsSingleUseSlaveBuildWrapper.class.getName());
+    private static final String BUILD_TAG = "BUILD_TAG";
+    private static final String BUILD_USER = "BUILD_USER";
+    private static final String SLAVE_POST_ACTION = "slavePostAction";
 
     @DataBoundConstructor
     public JCloudsSingleUseSlaveBuildWrapper() {
@@ -108,19 +109,11 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
         LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
                 + "(" + nodeId + ")");
         // default retention: two days (2 * 1440 mins)
-        jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2 * JCloudsConstant.MILLISEC_IN_DAY);
+        jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2 * JCloudsConstant.MILLI_SEC_IN_DAY);
         jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
 
         if (!Strings.isNullOrEmpty(nodeName)) {
-            Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
-            if (nodeDescription != null) {
-                nodeDescription.setAccessible(true);
-                try {
-                    nodeDescription.set(jcloudsSlave, nodeName);
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                }
-            }
+            JCloudsUtility.setSlaveDescription(jcloudsSlave, nodeName);
         }
         JCloudsUtility.updateComputerList();
         JCloudsUtility.saveSettingToConfig();
@@ -142,22 +135,21 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             LOGGER.log(Level.SEVERE, "Failed to get build environment", e);
             return null;
         }
-        String newNodeName = constructNodeName(env);
-        return newNodeName;
+        return constructNodeName(env);
     }
 
     private String constructNodeName(EnvVars env) {
-        String buildTag = env.get("BUILD_TAG");
+        String buildTag = env.get(BUILD_TAG);
         if (Strings.isNullOrEmpty(buildTag)){
             LOGGER.log(Level.SEVERE, "Failed to get BUILD_USER environment during assign new node name to slave");
             return null;
         }
         String nodeName = buildTag.replaceFirst("jenkins-","").toLowerCase();
-        String buildUser = env.get("BUILD_USER");
+        String buildUser = env.get(BUILD_USER);
         if (!Strings.isNullOrEmpty(buildUser)) {
             nodeName = (nodeName + "-" + buildUser).toLowerCase();
         }
-        String slavePostAction = env.get("slavePostAction");
+        String slavePostAction = env.get(SLAVE_POST_ACTION);
         if (InstancePostAction.OFFLINE_SLAVE.equals(slavePostAction)) {
             final String offlineSuffix = "-offline";
             nodeName = nodeName + offlineSuffix;

@@ -1,6 +1,8 @@
 package jenkins.plugins.jclouds.compute;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
@@ -48,14 +50,10 @@ public class JCloudsUtility {
      * Save jenkins setting to the config.xml
      */
     public static void saveSettingToConfig() {
-        Method save = ReflectionUtils.findMethod(Jenkins.getInstance().getClass(), "save", null);
-        save.setAccessible(true);
         try {
-            save.invoke(Jenkins.getInstance(), null);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
+            Jenkins.getInstance().save();
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Failed saving to config file", e);
         }
     }
 
@@ -94,5 +92,18 @@ public class JCloudsUtility {
         } catch (UnsupportedEncodingException e) {
             LOGGER.log(Level.SEVERE, "Unable to send to address: " + address + '\n' + e);
         }
+    }
+
+    public static void setSlaveDescription(JCloudsSlave jcloudsSlave, String description) {
+        Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
+        if (nodeDescription != null) {
+            nodeDescription.setAccessible(true);
+            try {
+                nodeDescription.set(jcloudsSlave, description);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 }
