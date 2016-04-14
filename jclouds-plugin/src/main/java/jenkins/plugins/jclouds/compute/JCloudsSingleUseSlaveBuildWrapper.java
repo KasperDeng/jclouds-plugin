@@ -116,7 +116,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             JCloudsUtility.setSlaveDescription(jcloudsSlave, nodeName);
         }
         JCloudsUtility.updateComputerList();
-        JCloudsUtility.saveSettingToConfig();
+        JCloudsUtility.saveNodesSettingToConfig();
     }
 
     private EnvVars getJenkinsEnv(AbstractBuild build) throws IOException, InterruptedException {

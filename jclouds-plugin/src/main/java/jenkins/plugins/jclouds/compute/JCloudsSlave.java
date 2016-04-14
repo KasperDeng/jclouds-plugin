@@ -170,7 +170,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
         Long extendMinTime = TimeUnit2.MILLISECONDS.toMinutes(extendTime);
         setOverrideRetentionTime(idleMinTime.intValue() + extendMinTime.intValue());
         isEmailNotified = false;
-        JCloudsUtility.saveSettingToConfig();
+        JCloudsUtility.saveNodesSettingToConfig();
     }
 
     public String getRetentionDay() {

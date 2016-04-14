@@ -47,6 +47,18 @@ public class JCloudsUtility {
     }
 
     /**
+     * Save jenkins nodes setting to the config.xml
+     */
+    public static void saveNodesSettingToConfig() {
+        try {
+            // renew the node list
+            Jenkins.getInstance().setNodes(Jenkins.getInstance().getNodes());
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Failed saving to config file", e);
+        }
+    }
+
+    /**
      * Save jenkins setting to the config.xml
      */
     public static void saveSettingToConfig() {
