@@ -154,7 +154,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
 
     public void setOverrideRetentionTime(int overrideRetentionTime) {
         this.overrideRetentionTime = overrideRetentionTime;
-        JCloudsUtility.saveSettingToConfig();
+        JCloudsUtility.saveNodesSettingToConfig();
     }
 
     public long getTerminatedMillTime() {
@@ -227,7 +227,7 @@ public class JCloudsSlave extends AbstractCloudSlave {
 
     public void setIsEmailNotified(Boolean isEmailNotified) {
         this.isEmailNotified = isEmailNotified;
-        JCloudsUtility.saveSettingToConfig();
+        JCloudsUtility.saveNodesSettingToConfig();
     }
 
     public Boolean isOfflineOsInstance() {
