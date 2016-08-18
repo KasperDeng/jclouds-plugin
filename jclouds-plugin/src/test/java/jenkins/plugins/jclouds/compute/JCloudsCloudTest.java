@@ -30,7 +30,7 @@ public class JCloudsCloudTest {
         assertTrue("Cloud Section must be present in the global configuration ", pageText.contains("Cloud"));
 
         final HtmlForm configForm = page.getFormByName("config");
-        final HtmlButton buttonByCaption = configForm.getButtonByCaption("Add a new cloud");
+        final HtmlButton buttonByCaption = configForm.getButtonByName("Add a new cloud");
         HtmlPage page1 = buttonByCaption.click();
         WebAssert.assertLinkPresentWithText(page1, "Cloud (JClouds)");
 
@@ -45,9 +45,9 @@ public class JCloudsCloudTest {
         HtmlForm configForm2 = page2.getFormByName("config");
         assertNotNull(configForm2.getTextAreaByName("_.privateKey"));
         assertNotNull(configForm2.getTextAreaByName("_.publicKey"));
-        HtmlButton generateKeyPairButton = configForm2.getButtonByCaption("Generate Key Pair");
-        HtmlButton testConnectionButton = configForm2.getButtonByCaption("Test Connection");
-        HtmlButton deleteCloudButton = configForm2.getButtonByCaption("Delete cloud");
+        HtmlButton generateKeyPairButton = configForm2.getButtonByName("Generate Key Pair");
+        HtmlButton testConnectionButton = configForm2.getButtonByName("Test Connection");
+        HtmlButton deleteCloudButton = configForm2.getButtonByName("Delete cloud");
         assertNotNull(generateKeyPairButton);
         assertNotNull(testConnectionButton);
         assertNotNull(deleteCloudButton);

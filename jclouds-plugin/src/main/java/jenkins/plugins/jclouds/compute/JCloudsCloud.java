@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
@@ -243,21 +244,36 @@ public class JCloudsCloud extends Cloud {
 
     private void ensureLaunched(JCloudsSlave jcloudsSlave) throws InterruptedException, ExecutionException {
         jcloudsSlave.waitForPhoneHome(null);
-        Integer launchTimeoutSec = 5 * 60;
+        Integer launchTimeoutSec;
+        try {
+            launchTimeoutSec = Integer.parseInt(System.getProperty("jclouds.plugin.launchTimeoutSec"));
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Failed to get system property \"jclouds.plugin.launchTimeoutSec\"");
+            launchTimeoutSec = 5 * 60; // default value, unit:second
+        }
+
+        Integer connectInterval;
+        try {
+            connectInterval = Integer.parseInt(System.getProperty("jclouds.plugin.connectInterval"));
+        } catch (NumberFormatException e) {
+            LOGGER.log(Level.WARNING, "Failed to get system property \"jclouds.plugin.connectInterval\"");
+            connectInterval = 10;  // default value, unit:second
+        }
+
         Computer computer = jcloudsSlave.toComputer();
         long startMoment = System.currentTimeMillis();
         while (computer.isOffline()) {
             try {
+                Thread.sleep(connectInterval * 1000L);
                 LOGGER.info(String.format("Slave [%s] not connected yet", jcloudsSlave.getDisplayName()));
                 computer.connect(false).get();
-                Thread.sleep(5000l);
             } catch (InterruptedException e) {
                 LOGGER.warning(String.format("Error while launching slave: %s", e));
             } catch (ExecutionException e) {
                 LOGGER.warning(String.format("Error while launching slave: %s", e));
             }
 
-            if ((System.currentTimeMillis() - startMoment) > 1000l * launchTimeoutSec) {
+            if ((System.currentTimeMillis() - startMoment) > 1000L * launchTimeoutSec) {
                 String message = String.format("Failed to connect to slave within timeout (%d s).", launchTimeoutSec);
                 LOGGER.warning(message);
                 throw new ExecutionException(new Throwable(message));
