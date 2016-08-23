@@ -52,7 +52,8 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
     }
 
     public String getName() {
-        return getNode().getNodeName();
+        JCloudsSlave jCloudsSlave = getNode();
+        return jCloudsSlave != null ? jCloudsSlave.getNodeName() : "";
     }
 
     public long getRemainRetentionTime() {
@@ -96,7 +97,9 @@ public class JCloudsComputer extends AbstractCloudComputer<JCloudsSlave> {
     }
 
     /**
-     * Delete the slave, terminate the instance. Can be called either by doDoDelete() or from JCloudsRetentionStrategy.
+     * Delete the slave, terminate the instance.
+     * Should only be called by JCloudsRetentionStrategy which has clean up thread to terminate it.
+     * Prevent multi-thread termination.
      *
      * @throws InterruptedException
      */

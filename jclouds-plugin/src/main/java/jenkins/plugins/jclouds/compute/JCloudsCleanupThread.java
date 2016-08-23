@@ -47,43 +47,46 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
 
         for (final Computer c : Jenkins.getInstance().getComputers()) {
             if (JCloudsComputer.class.isInstance(c)) {
-                if (((JCloudsComputer) c).getNode().isPendingDelete()) {
-                    final JCloudsComputer comp = (JCloudsComputer) c;
-                    computersToDeleteBuilder.add(comp);
-                    ListenableFuture<?> f = executor.submit(new Callable<String>() {
-                        public String call() {
-                            logger.log(Level.INFO, "Deleting pending node " + comp.getName());
-                            try {
-                                String nodeName = comp.getNode().getNodeName();
-                                comp.getNode().terminate();
-                                return nodeName;
-                            } catch (IOException e) {
-                                logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
-                            } catch (InterruptedException e) {
-                                logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
+                final JCloudsComputer comp = (JCloudsComputer) c;
+                final JCloudsSlave jCloudsSlave = comp.getNode();
+                if (jCloudsSlave != null) {   // Ensure the node is still there
+                    if (jCloudsSlave.isPendingDelete()) {
+                        computersToDeleteBuilder.add(comp);
+                        ListenableFuture<?> f = executor.submit(new Callable<String>() {
+                            public String call() {
+                                logger.log(Level.INFO, "Deleting pending node " + jCloudsSlave.getNodeName());
+                                try {
+                                    String nodeName = jCloudsSlave.getNodeName();
+                                    jCloudsSlave.terminate();
+                                    return nodeName;
+                                } catch (IOException e) {
+                                    logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
+                                } catch (InterruptedException e) {
+                                    logger.log(Level.WARNING, "Failed to disconnect and delete " + c.getName() + ": " + e.getMessage());
+                                }
+                                return null;
                             }
-                            return null;
-                        }
-                    });
-                    Futures.addCallback(f, new FutureCallback<Object>() {
-                        @Override
-                        public void onSuccess(Object nodeName) {
-                            deleteSlaveLog((String) nodeName);
-                        }
+                        });
+                        Futures.addCallback(f, new FutureCallback<Object>() {
+                            @Override
+                            public void onSuccess(Object nodeName) {
+                                deleteSlaveLog((String) nodeName);
+                            }
 
-                        @Override
-                        public void onFailure(Throwable throwable) {
+                            @Override
+                            public void onFailure(Throwable throwable) {
 
+                            }
+                        });
+                        deletedNodesBuilder.add(f);
+                    } else if ((c.getChannel() == null) && (jCloudsSlave.isOfflineOsInstance())) {
+                        logger.log(Level.SEVERE, "Null connection channel in orphan offline node, terminate " +
+                                jCloudsSlave.getNodeName() + ":" + jCloudsSlave.getNodeDescription());
+                        try {
+                            jCloudsSlave.terminate();
+                        } catch (Exception ex) {
+                            logger.log(Level.SEVERE, "Exceptions in orphan node termination! " + ex);
                         }
-                    });
-                    deletedNodesBuilder.add(f);
-                } else if ((c.getChannel() == null) && ((JCloudsComputer) c).getNode().isOfflineOsInstance()) {
-                    logger.log(Level.SEVERE, "Null connection channel in orphan offline node, terminate " +
-                            c.getNode().getNodeName() + ":" + c.getNode().getNodeDescription());
-                    try {
-                        ((JCloudsComputer) c).getNode().terminate();
-                    } catch (Exception e1) {
-                        logger.log(Level.SEVERE, "Exceptions in orphan node termination!");
                     }
                 }
             }
