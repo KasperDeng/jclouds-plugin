@@ -228,7 +228,9 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
     public NodeMetadata get() {
         LOGGER.info("Provisioning new jclouds node");
         ImmutableMap<String, String> userMetadata = ImmutableMap.of("Name", name);
-        TemplateBuilder templateBuilder = getCloud().getCompute().templateBuilder();
+        ComputeService computeService = getCloud().getCompute();
+        computeService.listImages();
+        TemplateBuilder templateBuilder = computeService.templateBuilder();
         if (!Strings.isNullOrEmpty(imageId)) {
             LOGGER.info("Setting image id to " + imageId);
             templateBuilder.imageId(imageId);

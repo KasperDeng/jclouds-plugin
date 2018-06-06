@@ -234,6 +234,10 @@ public class JCloudsSlave extends AbstractCloudSlave {
         return JCloudsConstant.OFFLINE_LABEL.equals(getLabelString());
     }
 
+    public boolean isTimeUp() {
+        return getTerminatedMillTime() < System.currentTimeMillis();
+    }
+
     public String getNodeId() {
         return nodeId;
     }

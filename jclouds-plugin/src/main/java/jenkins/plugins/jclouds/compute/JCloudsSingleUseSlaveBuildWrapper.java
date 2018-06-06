@@ -25,6 +25,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
     private static final String BUILD_TAG = "BUILD_TAG";
     private static final String BUILD_USER = "BUILD_USER";
     private static final String SLAVE_POST_ACTION = "slavePostAction";
+    private static final int OFFLINE_INSTANCE_RETENTION_TIME_IN_DAYS = 1;
 
     @DataBoundConstructor
     public JCloudsSingleUseSlaveBuildWrapper() {
@@ -47,7 +48,8 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             final String newNodeName = getNewNodeName(build);
             LOGGER.info("Got newNodeName " + newNodeName + " for running node(" + nodeId + ")");
             try {
-                computeService.renameNode(nodeId, newNodeName); // have inside checkNotNull for input newNodeName
+                // have inside checkNotNull for input newNodeName
+                computeService.renameNode(nodeId, newNodeName);
             } catch (Exception e) {
                 LOGGER.warning("Failed to rename the node.\n" + e);
             }
@@ -109,7 +111,8 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
         LOGGER.info("Offline parameter set: Offline slave " + jcloudsSlave.getDisplayName()
                 + "(" + nodeId + ")");
         // default retention: two days (2 * 1440 mins)
-        jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() + 2 * JCloudsConstant.MILLI_SEC_IN_DAY);
+        jcloudsSlave.setTerminatedMillTime(System.currentTimeMillis() +
+                OFFLINE_INSTANCE_RETENTION_TIME_IN_DAYS * JCloudsConstant.MILLI_SEC_IN_DAY);
         jcloudsSlave.setLabelString(JCloudsConstant.OFFLINE_LABEL);
 
         if (!Strings.isNullOrEmpty(nodeName)) {
@@ -120,8 +123,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
     }
 
     private EnvVars getJenkinsEnv(AbstractBuild build) throws IOException, InterruptedException {
-        EnvVars env = build.getEnvironment(new LogTaskListener(LOGGER, Level.INFO));
-        return env;
+        return build.getEnvironment(new LogTaskListener(LOGGER, Level.INFO));
     }
 
     private String getNewNodeName(AbstractBuild build) {

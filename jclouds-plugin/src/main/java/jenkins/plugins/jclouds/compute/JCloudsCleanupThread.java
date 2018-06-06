@@ -2,6 +2,7 @@ package jenkins.plugins.jclouds.compute;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 
@@ -49,7 +50,8 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
             if (JCloudsComputer.class.isInstance(c)) {
                 final JCloudsComputer comp = (JCloudsComputer) c;
                 final JCloudsSlave jCloudsSlave = comp.getNode();
-                if (jCloudsSlave != null) {   // Ensure the node is still there
+                if (jCloudsSlave != null) {
+                    // Ensure the node is still there
                     if (jCloudsSlave.isPendingDelete()) {
                         computersToDeleteBuilder.add(comp);
                         ListenableFuture<?> f = executor.submit(new Callable<String>() {
@@ -79,9 +81,12 @@ public final class JCloudsCleanupThread extends AsyncPeriodicWork {
                             }
                         });
                         deletedNodesBuilder.add(f);
-                    } else if ((c.getChannel() == null) && (jCloudsSlave.isOfflineOsInstance())) {
+                    } else if ((c.getChannel() == null) && (jCloudsSlave.isOfflineOsInstance()) &&
+                            (jCloudsSlave.isTimeUp())) {
                         logger.log(Level.SEVERE, "Null connection channel in orphan offline node, terminate " +
-                                jCloudsSlave.getNodeName() + ":" + jCloudsSlave.getNodeDescription());
+                                jCloudsSlave.getNodeName() + ", termination time: " +
+                                new Date(jCloudsSlave.getTerminatedMillTime()) +  ":"
+                                + jCloudsSlave.getNodeDescription());
                         try {
                             jCloudsSlave.terminate();
                         } catch (Exception ex) {
