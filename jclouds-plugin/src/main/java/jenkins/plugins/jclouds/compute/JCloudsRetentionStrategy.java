@@ -23,8 +23,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import hudson.model.Descriptor;
 import hudson.model.User;
+import hudson.model.UserProperty;
 import hudson.slaves.OfflineCause;
 import hudson.slaves.RetentionStrategy;
+import hudson.tasks.Mailer;
 import hudson.util.TimeUnit2;
 import jenkins.model.Jenkins;
 
@@ -86,15 +88,14 @@ public class JCloudsRetentionStrategy extends RetentionStrategy<JCloudsComputer>
                     String nodeDescription = node.getNodeDescription();
                     String emailAddress = null;
                     User instanceOwner = Jenkins.getInstance().getUser(getUserNameFromNodeDescription(nodeDescription));
-                    //                    // TODO: 9/3/2018 fix  Mailer class dependency
-                    //                    if (instanceOwner != null) {
-                    //                        for (UserProperty up : instanceOwner.getAllProperties()) {
-                    //                            if (up instanceof Mailer.UserProperty) {
-                    //                                emailAddress = ((Mailer.UserProperty) up).getAddress();
-                    //                                break;
-                    //                            }
-                    //                        }
-                    //                    }
+                    if (instanceOwner != null) {
+                        for (UserProperty up : instanceOwner.getAllProperties()) {
+                            if (up instanceof Mailer.UserProperty) {
+                                emailAddress = ((Mailer.UserProperty) up).getAddress();
+                                break;
+                            }
+                        }
+                    }
                     if (emailAddress != null) {
                         String emailSubject = "Your Offline Instance Will be Terminated in 4 Hours";
                         StringBuilder emailContent = new StringBuilder();
