@@ -16,9 +16,8 @@ limitations under the License.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout" xmlns:f="/lib/form">
-    <l:layout norefresh="true" title="${it.name} Configuration">
+    <l:layout norefresh="true" permission="${app.ADMINISTER}" title="${it.name} Configuration">
         <st:include page="sidepanel.jelly"/>
-
         <l:main-panel>
             <f:form method="post" action="configSubmit" name="config">
                 <j:set var="instance" value="${it.node}" />
@@ -40,7 +39,6 @@ limitations under the License.
                     <f:readOnlyTextbox />
                 </f:entry>
 
-<<<<<<< HEAD
                 <!--<f:entry title="${%Retention Time}" help="${rootURL}/plugin/jclouds-jenkins/help/help-retentionTime.html">
                     <f:readOnlyTextbox field="retentionDay" />
                 </f:entry>-->
@@ -88,9 +86,8 @@ limitations under the License.
                         </f:block>
                     </f:entry>
                 </j:if>
-=======
+
                 <f:slave-mode name="mode" node="${instance}" />
->>>>>>> 7301897bfa748ac9d0d056f4e129968b0c634ec4
 
                 <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}" field="nodeProperties" />
 

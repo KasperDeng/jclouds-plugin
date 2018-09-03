@@ -183,26 +183,22 @@ limitations under the License.
           <f:number clazz="number" min="0" step="1" default="15"/>
         </f:entry>
 
+        <f:entry title="${%Floating IP Pool}" field="floatingIpPoolName">
+          <f:textbox />
+        </f:entry>
+        <f:entry title="${%Network Range for Floating IP Associated with}" field="networkRangeFloatingIpAssociated">
+          <f:textbox />
+        </f:entry>
         <f:entry title="${%Key Pair Name}" field="keyPairName">
           <f:textbox />
         </f:entry>
         <f:entry title="${%Use config drive}" field="useConfigDrive">
           <f:checkbox />
         </f:entry>
-<<<<<<< HEAD
-        <f:entry title="Floating IP Pool" field="floatingIpPoolName">
-          <f:textbox />
-        </f:entry>
-        <f:entry title="Network Range for Floating IP Associated with" field="networkRangeFloatingIpAssociated">
-          <f:textbox />
-        </f:entry>
-        <f:entry title="Key Pair Name" field="keyPairName">
-=======
         <f:entry title="${%Assign Public IP}" field="assignPublicIp">
           <f:checkbox default="true"/>
         </f:entry>
         <f:entry title="${%Preferred Address}" field="preferredAddress">
->>>>>>> 7301897bfa748ac9d0d056f4e129968b0c634ec4
           <f:textbox />
         </f:entry>
         <f:entry title="${%Use JNLP}" field="useJnlp">

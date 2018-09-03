@@ -3,60 +3,37 @@ package jenkins.plugins.jclouds.compute;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jvnet.hudson.test.JenkinsRule;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
 
 /**
  * @author Vijay Kiran
  */
 public class JCloudsSlaveTemplateTest {
 
-<<<<<<< HEAD
-    public void testConfigRoundtrip() throws Exception {
-        String name = "testSlave";
-        JCloudsSlaveTemplate originalTemplate = new JCloudsSlaveTemplate(name, "imageId", null, "hardwareId", 1, 512, "osFamily", "osVersion", "locationId",
-                "jclouds-slave-type1 jclouds-type2", "Description", "initScript", null, "1", false, null, null, true,
-                "jvmOptions", false, null, false,
-                false, 5, 0, true, "nova", "192.168.8", false, 0, "jenkins", true, "network1_id,network2_id", "security_group1,security_group2", null);
-
-        List<JCloudsSlaveTemplate> templates = new ArrayList<JCloudsSlaveTemplate>();
-        templates.add(originalTemplate);
-
-        JCloudsCloud originalCloud = new JCloudsCloud("aws-profile", "aws-ec2", "identity", "credential", "privateKey", "tenantId", "publicKey", "endPointUrl", 1, 30,
-                600 * 1000, 600 * 1000, null, templates);
-
-        hudson.clouds.add(originalCloud);
-        submit(createWebClient().goTo("configure").getFormByName("config"));
-
-        assertEqualBeans(originalCloud, JCloudsCloud.getByName("aws-profile"), "profile,providerName,identity,credential,privateKey,publicKey,endPointUrl");
-
-        assertEqualBeans(originalTemplate, JCloudsCloud.getByName("aws-profile").getTemplate(name),
-                "name,cores,ram,osFamily,osVersion,labelString,description,initScript,numExecutors,stopOnTerminate");
-=======
-    @Rule public JenkinsRule j = new JenkinsRule();
->>>>>>> 7301897bfa748ac9d0d056f4e129968b0c634ec4
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
 
     @Test
     public void testConfigRoundtrip() throws Exception {
         final String name = "testSlave";
-        final JCloudsSlaveTemplate beforeTemplate = new JCloudsSlaveTemplate(name, "imageId", null, "hardwareId",
-                1, 512, "osFamily", "osVersion", "locationId", "jclouds-slave-type1 jclouds-type2",
-                "Description", "initScriptId", 1 /* numExecutors */, false /* stopOnTerminate */,
-                "jvmOptions", false /* preExistingJenkinsUser */, null /* fsRoot */, false /* allowSudo */,
+        final JCloudsSlaveTemplate beforeTemplate = new JCloudsSlaveTemplate(name, "imageId", null, "hardwareId", 1,
+                512, "osFamily", "osVersion", "locationId", "jclouds-slave-type1 jclouds-type2", "Description",
+                "initScriptId", 1 /* numExecutors */, false /* stopOnTerminate */, "jvmOptions",
+                false /* preExistingJenkinsUser */, null /* fsRoot */, false /* allowSudo */,
                 false /* installPrivateKey */, 5 /* overrideRetentionTime */, 0 /* spoolDelayMs */,
                 true /* assignFloatingIp */, false /* waitPhoneHome */, 0 /* waitPhoneHomeTimeout */,
                 null /* keyPairName */, true /* assignPublicIp */, "network1_id,network2_id",
-                "security_group1,security_group2", null /* credentialsId */,
-                null /* adminCredentialsId */, "NORMAL" /* mode */, true /* useConfigDrive */,
-                null /* configDataIds */, "192.168.1.0/24" /* preferredAddress */, false /* useJnlp */ );
+                "security_group1,security_group2", null /* credentialsId */, null /* adminCredentialsId */,
+                "NORMAL" /* mode */, true /* useConfigDrive */, null /* configDataIds */,
+                "192.168.1.0/24" /* preferredAddress */, false /* useJnlp */ , "nova", "192.168.8");
 
         final List<JCloudsSlaveTemplate> templates = new ArrayList<>();
         templates.add(beforeTemplate);
 
-        final JCloudsCloud beforeCloud = new JCloudsCloud("aws-profile",
-                "aws-ec2", "cloudCredentialsId", "cloudGlobalKeyId",
-                "http://localhost", 1, 30, 600 * 1000, 600 * 1000, null, "foobar", true, templates);
+        final JCloudsCloud beforeCloud = new JCloudsCloud("aws-profile", "aws-ec2", "tenantId", "cloudCredentialsId",
+                "cloudGlobalKeyId", "http://localhost", 1, 30, 600 * 1000, 600 * 1000, null, "foobar", true, templates);
 
         j.jenkins.clouds.add(beforeCloud);
         j.submit(j.createWebClient().goTo("configure").getFormByName("config"));
@@ -64,8 +41,7 @@ public class JCloudsSlaveTemplateTest {
         final JCloudsCloud afterCloud = JCloudsCloud.getByName("aws-profile");
         final JCloudsSlaveTemplate afterTemplate = afterCloud.getTemplate(name);
 
-        j.assertEqualBeans(beforeCloud, afterCloud,
-                "profile,providerName,endPointUrl,trustAll,groupPrefix");
+        j.assertEqualBeans(beforeCloud, afterCloud, "profile,providerName,endPointUrl,trustAll,groupPrefix");
         j.assertEqualBeans(beforeTemplate, afterTemplate,
                 "name,cores,ram,osFamily,osVersion,labelString,description,numExecutors,stopOnTerminate,mode,useConfigDrive,preferredAddress,useJnlp");
     }

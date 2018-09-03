@@ -7,6 +7,8 @@ import java.util.logging.Level;
 import org.jclouds.compute.ComputeService;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import com.google.common.base.Strings;
+
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
@@ -18,7 +20,6 @@ import hudson.slaves.OfflineCause;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.LogTaskListener;
-import shaded.com.google.common.base.Strings;
 
 public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
     private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(JCloudsSingleUseSlaveBuildWrapper.class.getName());
@@ -47,12 +48,13 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             // Rename that running node with job name and user name
             final String newNodeName = getNewNodeName(build);
             LOGGER.info("Got newNodeName " + newNodeName + " for running node(" + nodeId + ")");
-            try {
-                // have inside checkNotNull for input newNodeName
-                computeService.renameNode(nodeId, newNodeName);
-            } catch (Exception e) {
-                LOGGER.warning("Failed to rename the node.\n" + e);
-            }
+            // TODO: 9/3/2018 Kasper need to upgrade jclouds version to 2.1.0
+            //            try {
+            //                // have inside checkNotNull for input newNodeName
+            //                computeService.renameNode(nodeId, newNodeName);
+            //            } catch (Exception e) {
+            //                LOGGER.warning("Failed to rename the node.\n" + e);
+            //            }
 
             return new Environment() {
                 @Override
