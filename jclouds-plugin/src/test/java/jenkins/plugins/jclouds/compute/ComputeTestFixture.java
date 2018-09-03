@@ -1,6 +1,6 @@
 package jenkins.plugins.jclouds.compute;
 
-import static shaded.com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Map;
 
@@ -9,14 +9,22 @@ import org.jclouds.compute.internal.BaseComputeServiceContextLiveTest;
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.jclouds.util.Maps2;
 
-import shaded.com.google.common.base.Function;
-import shaded.com.google.common.base.Predicates;
-import shaded.com.google.common.collect.Maps;
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 import com.google.inject.Module;
+
+import jenkins.plugins.jclouds.internal.CredentialsHelper;
+
+import hudson.util.Secret;
+
+import org.junit.Assume;
 
 @SuppressWarnings("unchecked")
 public class ComputeTestFixture extends BaseComputeServiceContextLiveTest {
     public static String PROVIDER;
+    public static boolean SKIPIT = false;
 
     /**
      * base jclouds tests expect properties to arrive in a different naming convention, based on provider name.
@@ -37,12 +45,13 @@ public class ComputeTestFixture extends BaseComputeServiceContextLiveTest {
      * </pre>
      */
     static {
-        PROVIDER = checkNotNull(System.getProperty("test.jenkins.compute.provider"), "test.compute.provider variable must be set!");
+        PROVIDER = System.getProperty("test.jenkins.compute.provider");
+        SKIPIT = Strings.isNullOrEmpty(PROVIDER);
         Map<String, String> filtered = Maps.filterKeys(Map.class.cast(System.getProperties()), Predicates.containsPattern("^test\\.jenkins\\.compute"));
         Map<String, String> transformed = Maps2.transformKeys(filtered, new Function<String, String>() {
 
             public String apply(String arg0) {
-                return arg0.replaceAll("test.jenkins.compute", "test." + PROVIDER);
+                return arg0.replaceAll("test.jenkins.compute", "test." + (SKIPIT ? "" : PROVIDER));
             }
 
         });
@@ -70,12 +79,8 @@ public class ComputeTestFixture extends BaseComputeServiceContextLiveTest {
         return endpoint;
     }
 
-    public String getIdentity() {
-        return identity;
-    }
-
-    public String getCredential() {
-        return credential;
+    public String getCredentialsId() {
+        return CredentialsHelper.convertCredentials(provider, identity, Secret.fromString(credential));
     }
 
     public String getTenantId() {
@@ -83,11 +88,16 @@ public class ComputeTestFixture extends BaseComputeServiceContextLiveTest {
     }
 
     public void setUp() {
-        super.setupContext();
+        Assume.assumeFalse(SKIPIT);
+        if (!SKIPIT) {
+            super.setupContext();
+        }
     }
 
     public void tearDown() {
-        super.tearDownContext();
+        if (!SKIPIT) {
+            super.tearDownContext();
+        }
     }
 
 }

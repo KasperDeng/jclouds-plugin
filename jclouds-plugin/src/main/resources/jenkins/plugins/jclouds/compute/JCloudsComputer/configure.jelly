@@ -1,3 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2010-2016 Adrian Cole, Andrew Bayer, Fritz Elfert, Marat Mavlyutov, Monty Taylor, Vijay Kiran et. al.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout" xmlns:f="/lib/form">
     <l:layout norefresh="true" title="${it.name} Configuration">
         <st:include page="sidepanel.jelly"/>
@@ -23,6 +40,7 @@
                     <f:readOnlyTextbox />
                 </f:entry>
 
+<<<<<<< HEAD
                 <!--<f:entry title="${%Retention Time}" help="${rootURL}/plugin/jclouds-jenkins/help/help-retentionTime.html">
                     <f:readOnlyTextbox field="retentionDay" />
                 </f:entry>-->
@@ -70,6 +88,9 @@
                         </f:block>
                     </f:entry>
                 </j:if>
+=======
+                <f:slave-mode name="mode" node="${instance}" />
+>>>>>>> 7301897bfa748ac9d0d056f4e129968b0c634ec4
 
                 <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}" field="nodeProperties" />
 

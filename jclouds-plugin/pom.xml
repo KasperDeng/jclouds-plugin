@@ -1,44 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2010-2016 Adrian Cole, Andrew Bayer, Fritz Elfert, Marat Mavlyutov, Monty Taylor, Vijay Kiran et. al.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>jclouds-jenkins-parent</artifactId>
-        <version>2.9-SNAPSHOT</version>
+        <version>2.15-SNAPSHOT</version>
         <relativePath>..</relativePath>
     </parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>jclouds-jenkins</artifactId>
-    <version>2.9-KASPER-0.73</version>
+    <version>2.15-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Jenkins JClouds plugin</name>
     <description>Allows Jenkins to build using Cloud Servers via JClouds</description>
     <url>https://wiki.jenkins-ci.org/display/JENKINS/JClouds+Plugin</url>
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.jenkins-ci.main</groupId>
-                <artifactId>jenkins-core</artifactId>
-                <version>${jenkins.parent.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.sonatype.sisu</groupId>
-                        <artifactId>sisu-guava</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>com.jcraft</groupId>
-            <artifactId>jsch</artifactId>
-            <version>${jsch.version}</version>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>3.0</version>
         </dependency>
         <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-            <version>${jsr305.version}</version>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>18.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.felfert</groupId>
+            <artifactId>cidrutils</artifactId>
+            <version>1.1</version>
         </dependency>
         <dependency>
             <groupId>net.sf.opencsv</groupId>
@@ -47,155 +59,126 @@
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>ssh-slaves</artifactId>
-            <version>1.9</version>
+            <artifactId>bouncycastle-api</artifactId>
+            <version>2.16.0</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>mailer</artifactId>
-            <version>1.10</version>
+            <artifactId>credentials</artifactId>
+            <version>2.1.11</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>ssh-credentials</artifactId>
+            <version>1.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>ssh-slaves</artifactId>
+            <version>1.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>config-file-provider</artifactId>
+            <version>2.15.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>cloud-stats</artifactId>
+            <version>0.13</version>
+        </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>jclouds-shaded</artifactId>
-            <version>2.9-KASPER-0.72</version>
-        </dependency>
-        <!-- Test Dependencies -->
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.0.0</version>
-            <scope>test</scope>
+            <version>2.15-SNAPSHOT</version>
         </dependency>
     </dependencies>
-    <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.jenkins-ci.tools</groupId>
-                    <artifactId>maven-hpi-plugin</artifactId>
-                    <version>${hpi.plugin.version}</version>
 
-                    <dependencies>
-                        <dependency>
-                            <groupId>com.google.guava</groupId>
-                            <artifactId>guava</artifactId>
-                            <version>${guava.version}</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>org.kohsuke.stapler</groupId>
-                            <artifactId>stapler</artifactId>
-                            <version>${stapler.version}</version>
-                        </dependency>
-                    </dependencies>
-                    <configuration>
-                        <disabledTestInjection>true</disabledTestInjection>
-                        <dependentWarExcludes>org.apache.jclouds*,com.google.guava*</dependentWarExcludes>
-                        <archive>
-                            <manifestEntries>
-                                <Mask-Classes>com.google.common</Mask-Classes>
-                            </manifestEntries>
-                        </archive>
-                        <maskClasses>com.google.common.</maskClasses>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+    <build>
         <finalName>${project.artifactId}</finalName>
         <plugins>
-            <plugin>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>2.2</version>
-                <configuration>
-                    <artifactSet>
-                        <includes>
-                            <include>org.apache.jclouds*:*</include>
-                            <include>com.google.guava:*</include>
-                        </includes>
-                    </artifactSet>
-                    <relocations>
-                        <relocation>
-                            <pattern>com.google.common</pattern>
-                            <shadedPattern>shaded.com.google.common</shadedPattern>
-                        </relocation>
-                    </relocations>
-                </configuration>
-            </plugin>
+
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.2</version>
-                <executions>
-                    <execution>
-                        <id>default-testCompile</id>
-                        <phase>test-compile</phase>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
-                        <configuration>
-                            <source>1.7</source>
-                            <target>1.7</target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>default-compile</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
-                        <configuration>
-                            <source>1.7</source>
-                            <target>1.7</target>
-                        </configuration>
-                    </execution>
-                </executions>
                 <configuration>
+                    <showDeprecation>true</showDeprecation>
+                    <showWarnings>true</showWarnings>
                     <source>1.7</source>
                     <target>1.7</target>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.jenkins-ci.tools</groupId>
                 <artifactId>maven-hpi-plugin</artifactId>
-                <version>${hpi.plugin.version}</version>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.google.guava</groupId>
-                        <artifactId>guava</artifactId>
-                        <version>${guava.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.kohsuke.stapler</groupId>
-                        <artifactId>stapler</artifactId>
-                        <version>${stapler.version}</version>
-                    </dependency>
-                </dependencies>
-                <configuration>
-                    <dependentWarExcludes>org.apache.jclouds*,com.google.guava*</dependentWarExcludes>
-                    <archive>
-                        <manifestEntries>
-                            <Mask-Classes>com.google.common</Mask-Classes>
-                        </manifestEntries>
-                    </archive>
-                    <maskClasses>com.google.common.</maskClasses>
-                </configuration>
+                <!-- version and config in from pluginManagement -->
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <systemPropertyVariables>
+                        <underSurefireTest>true</underSurefireTest>
+                    </systemPropertyVariables>
                     <excludes>
                         <exclude>**/*LiveTest.java</exclude>
-                        <exclude>**/*JCloudsSlaveTemplateTest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.4</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                            <goal>cpd-check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <failOnViolation>true</failOnViolation>
+                    <verbose>true</verbose>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>3.0.4</version>
+                <configuration>
+                    <excludeFilterFile>src/findbugs/excludesFilter.xml</excludeFilterFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.3</version>
+            </plugin>
+        </plugins>
+    </reporting>
     <scm>
         <connection>scm:git:git://github.com/jenkinsci/jclouds-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/jclouds-plugin.git</developerConnection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/jclouds-plugin.git
+        </developerConnection>
         <url>http://github.com/jenkinsci/jclouds-plugin</url>
+        <tag>HEAD</tag>
     </scm>
     <repositories>
         <repository>
@@ -232,25 +215,73 @@
                                         <include>**/*LiveTest.java</include>
                                     </includes>
                                     <systemPropertyVariables>
-                                        <test.jenkins.compute.provider>${test.jenkins.compute.provider}</test.jenkins.compute.provider>
-                                        <test.jenkins.compute.endpoint>${test.jenkins.compute.endpoint}</test.jenkins.compute.endpoint>
-                                        <test.jenkins.compute.api-version>${test.jenkins.compute.api-version}</test.jenkins.compute.api-version>
-                                        <test.jenkins.compute.build-version>${test.jenkins.compute.build-version}</test.jenkins.compute.build-version>
-                                        <test.jenkins.compute.identity>${test.jenkins.compute.identity}</test.jenkins.compute.identity>
-                                        <test.jenkins.compute.credential>${test.jenkins.compute.credential}</test.jenkins.compute.credential>
-                                        <test.jenkins.compute.image-id>${test.jenkins.compute.image-id}</test.jenkins.compute.image-id>
-                                        <test.jenkins.compute.image.login-user>${test.jenkins.compute.image.login-user}</test.jenkins.compute.image.login-user>
-                                        <test.jenkins.compute.image.authenticate-sudo>${test.jenkins.compute.image.authenticate-sudo}</test.jenkins.compute.image.authenticate-sudo>
-                                        <test.jenkins.blobstore.provider>${test.jenkins.blobstore.provider}</test.jenkins.blobstore.provider>
-                                        <test.jenkins.blobstore.endpoint>${test.jenkins.blobstore.endpoint}</test.jenkins.blobstore.endpoint>
-                                        <test.jenkins.blobstore.api-version>${test.jenkins.blobstore.api-version}</test.jenkins.blobstore.api-version>
-                                        <test.jenkins.blobstore.build-version>${test.jenkins.blobstore.build-version}</test.jenkins.blobstore.build-version>
-                                        <test.jenkins.blobstore.identity>${test.jenkins.blobstore.identity}</test.jenkins.blobstore.identity>
-                                        <test.jenkins.blobstore.credential>${test.jenkins.blobstore.credential}</test.jenkins.blobstore.credential>
+                                        <test.jenkins.compute.provider>
+                                            ${test.jenkins.compute.provider}
+                                        </test.jenkins.compute.provider>
+                                        <test.jenkins.compute.endpoint>
+                                            ${test.jenkins.compute.endpoint}
+                                        </test.jenkins.compute.endpoint>
+                                        <test.jenkins.compute.api-version>
+                                            ${test.jenkins.compute.api-version}
+                                        </test.jenkins.compute.api-version>
+                                        <test.jenkins.compute.build-version>
+                                            ${test.jenkins.compute.build-version}
+                                        </test.jenkins.compute.build-version>
+                                        <test.jenkins.compute.identity>
+                                            ${test.jenkins.compute.identity}
+                                        </test.jenkins.compute.identity>
+                                        <test.jenkins.compute.credential>
+                                            ${test.jenkins.compute.credential}
+                                        </test.jenkins.compute.credential>
+                                        <test.jenkins.compute.image-id>
+                                            ${test.jenkins.compute.image-id}
+                                        </test.jenkins.compute.image-id>
+                                        <test.jenkins.compute.image.login-user>
+                                            ${test.jenkins.compute.image.login-user}
+                                        </test.jenkins.compute.image.login-user>
+                                        <test.jenkins.compute.image.authenticate-sudo>
+                                            ${test.jenkins.compute.image.authenticate-sudo}
+                                        </test.jenkins.compute.image.authenticate-sudo>
+                                        <test.jenkins.blobstore.provider>
+                                            ${test.jenkins.blobstore.provider}
+                                        </test.jenkins.blobstore.provider>
+                                        <test.jenkins.blobstore.endpoint>
+                                            ${test.jenkins.blobstore.endpoint}
+                                        </test.jenkins.blobstore.endpoint>
+                                        <test.jenkins.blobstore.api-version>
+                                            ${test.jenkins.blobstore.api-version}
+                                        </test.jenkins.blobstore.api-version>
+                                        <test.jenkins.blobstore.build-version>
+                                            ${test.jenkins.blobstore.build-version}
+                                        </test.jenkins.blobstore.build-version>
+                                        <test.jenkins.blobstore.identity>
+                                            ${test.jenkins.blobstore.identity}
+                                        </test.jenkins.blobstore.identity>
+                                        <test.jenkins.blobstore.credential>
+                                            ${test.jenkins.blobstore.credential}
+                                        </test.jenkins.blobstore.credential>
                                     </systemPropertyVariables>
                                 </configuration>
                             </execution>
                         </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>java8build</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>2.7</version>
+                        <configuration>
+                            <additionalparam>-Xdoclint:none</additionalparam>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>

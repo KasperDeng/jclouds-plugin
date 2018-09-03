@@ -1,5 +1,9 @@
 # JClouds Plugin for Jenkins
 
+Old CI: [![Build Status](https://jenkins.ci.cloudbees.com/buildStatus/icon?job=plugins/jclouds-plugin)](https://jenkins.ci.cloudbees.com/job/plugins/job/jclouds-plugin/)
+New CI: [![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/jclouds-plugin/master)](https://ci.jenkins.io/job/Plugins/job/jclouds-plugin/job/master/)
+[Wiki](https://wiki.jenkins-ci.org/display/JENKINS/JClouds+Plugin)
+
 JClouds Jenkins plugin provides option to launch jenkins slaves on any Cloud provider supported by JClouds (http://jclouds.apache.org/reference/providers/). 
 
 ### Configuration Options
@@ -17,6 +21,8 @@ You can build and test this plugin using by cloning this repository and
 `mvn clean install hpi:run`
 
 The above command will start jenkins with JClouds plugin pre-configured.
+
+**NOTE**: Due to the issue [MNG-5899](https://issues.apache.org/jira/browse/MNG-5899) in Maven 3.3, it is recommended to use Maven 3.2 or older to build the plugin. If using Maven 3.3 is mandatory, then you can workaround the issue by building the entire project first, and then enter the `jclouds-plugin` folder and build only the plugin project to produce the right hpi package.
 
 ## Adding a new Cloud Provider
 

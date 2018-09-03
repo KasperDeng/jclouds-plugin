@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2010-2016 Adrian Cole, Andrew Bayer, Fritz Elfert, Marat Mavlyutov, Monty Taylor, Vijay Kiran et. al.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+  <table width="100%" class="pane">
+    <f:entry title="${%Profile name}" field="profileName">
+      <f:textbox/>
+    </f:entry>
+    <f:entry title="${%Provider Name}" field="providerName">
+      <f:select default="${descriptor.defaultProviderName()}" />
+    </f:entry>
+    <f:entry title="${%End Point URL}" field="endPointUrl">
+      <f:textbox/>
+    </f:entry>
+    <f:entry title="${%Credentials}" field="credentialsId">
+      <c:select/>
+    </f:entry>
+    <f:entry title="${%Relax security}" field="trustAll">
+      <f:checkbox/>
+    </f:entry>
+    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="providerName,credentialsId,endPointUrl,trustAll"/>
+    <f:entry title="">
+      <div align="right">
+        <f:repeatableDeleteButton/>
+      </div>
+    </f:entry>
+    <f:advanced>
+      <f:block>
+        <b>${%Location Options}</b>
+        <f:entry title="${%Location Id}" field="locationId">
+          <f:select />
+        </f:entry>
+        <f:validateButton title="${%Check Location Id}" progress="${%Checking...}" method="validateLocationId"
+          with="providerName,credentialsId,endPointUrl,locationId"/>
+      </f:block>
+    </f:advanced>
+  </table>
+</j:jelly>

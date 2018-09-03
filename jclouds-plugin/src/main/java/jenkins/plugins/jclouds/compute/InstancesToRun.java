@@ -1,3 +1,18 @@
+/*
+ * Copyright 2010-2016 Adrian Cole, Andrew Bayer, Fritz Elfert, Marat Mavlyutov, Monty Taylor, Vijay Kiran et. al.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package jenkins.plugins.jclouds.compute;
 
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -11,6 +26,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
 public final class InstancesToRun extends AbstractDescribableImpl<InstancesToRun> {
+
     public final String cloudName;
     public final String templateName;
     public final String manualTemplateName;
@@ -47,21 +63,34 @@ public final class InstancesToRun extends AbstractDescribableImpl<InstancesToRun
 
     @Extension
     public static class DescriptorImpl extends Descriptor<InstancesToRun> {
+
+        public String defaultCloudName() {
+            for (String name : JCloudsCloud.getCloudNames()) {
+                JCloudsCloud c = JCloudsCloud.getByName(name);
+                if (c != null && c.getTemplates().size() > 0) {
+                    return name;
+                }
+            }
+            return "";
+        }
+
         public ListBoxModel doFillCloudNameItems() {
             ListBoxModel m = new ListBoxModel();
-            for (String cloudName : JCloudsCloud.getCloudNames()) {
-                m.add(cloudName, cloudName);
+            for (String name : JCloudsCloud.getCloudNames()) {
+                JCloudsCloud c = JCloudsCloud.getByName(name);
+                if (c != null && c.getTemplates().size() > 0) {
+                    m.add(name, name);
+                }
             }
-
             return m;
         }
 
-        public ListBoxModel doFillTemplateNameItems(@QueryParameter String cloudName) {
+        public ListBoxModel doFillTemplateNameItems(@QueryParameter("cloudName") String cname) {
             ListBoxModel m = new ListBoxModel();
-            JCloudsCloud c = JCloudsCloud.getByName(cloudName);
+            JCloudsCloud c = JCloudsCloud.getByName(cname);
             if (c != null) {
                 for (JCloudsSlaveTemplate t : c.getTemplates()) {
-                    m.add(String.format("%s in cloud %s", t.name, cloudName), t.name);
+                    m.add(t.name, t.name);
                 }
             }
             return m;

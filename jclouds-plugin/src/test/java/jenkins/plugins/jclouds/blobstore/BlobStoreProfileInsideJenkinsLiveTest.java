@@ -1,24 +1,31 @@
 package jenkins.plugins.jclouds.blobstore;
 
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 
-public class BlobStoreProfileInsideJenkinsLiveTest extends HudsonTestCase {
+public class BlobStoreProfileInsideJenkinsLiveTest {
+
+    @Rule public JenkinsRule j = new JenkinsRule();
 
     private BlobStoreTestFixture fixture;
     private BlobStoreProfile profile;
 
-    @Override
+    @Before
     public void setUp() throws Exception {
-        super.setUp();
         fixture = new BlobStoreTestFixture();
         fixture.setUp();
 
         // TODO: this may need to vary per test
-        profile = new BlobStoreProfile(fixture.getProvider() + "-profile", fixture.getProvider(), fixture.getIdentity(), fixture.getCredential());
+        profile = new BlobStoreProfile(fixture.getProvider() + "-profile", fixture.getProvider(),
+                fixture.getCredentialsId(), fixture.getEndpoint(), null, true);
     }
 
     public static final String CONTAINER_PREFIX = System.getProperty("user.name") + "-blobstore-profile";
 
+    @Test
     public void testUpload() {
         String container = CONTAINER_PREFIX + "-upload";
         try {
@@ -31,9 +38,10 @@ public class BlobStoreProfileInsideJenkinsLiveTest extends HudsonTestCase {
         }
     }
 
-    @Override
+    @After
     public void tearDown() {
-        if (fixture != null)
+        if (fixture != null) {
             fixture.tearDown();
+        }
     }
 }

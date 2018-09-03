@@ -1,3 +1,18 @@
+/*
+ * Copyright 2010-2016 Adrian Cole, Andrew Bayer, Fritz Elfert, Marat Mavlyutov, Monty Taylor, Vijay Kiran et. al.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package jenkins.plugins.jclouds.blobstore;
 
 import hudson.Extension;
@@ -14,22 +29,19 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import hudson.util.CopyOnWriteList;
-import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import org.apache.commons.lang.StringUtils;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
 
 import org.jclouds.rest.AuthorizationException;
 
-import javax.servlet.ServletException;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import net.sf.json.JSONObject;
 
 /**
  * Publishes artifacts to Blobstore configured using JClouds
@@ -41,14 +53,16 @@ public class BlobStorePublisher extends Recorder implements Describable<Publishe
     private static final Logger LOGGER = Logger.getLogger(BlobStorePublisher.class.getName());
 
     private String profileName;
+
     @Extension
     public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
     private final List<BlobStoreEntry> entries;
 
     /**
-     * Create a new Blobstore publisher for the cofigured profile identified by profileName
+     * Create a new Blobstore publisher for the configured profile identified by profileName
      *
-     * @param profileName - the name of the configured profile name
+     * @param profileName The name of the configured profile name.
+     * @param entries The list of entries to be handled.
      */
     @DataBoundConstructor
     public BlobStorePublisher(String profileName, List<BlobStoreEntry> entries) {
@@ -66,7 +80,7 @@ public class BlobStorePublisher extends Recorder implements Describable<Publishe
     /**
      * Get list of entries to be uploaded.
      *
-     * @return
+     * @return The list of entries to be uploaded.
      */
     public List<BlobStoreEntry> getEntries() {
         return entries;
@@ -97,73 +111,82 @@ public class BlobStorePublisher extends Recorder implements Describable<Publishe
         this.profileName = profileName;
     }
 
-    protected void log(final PrintStream logger, final String message) {
-        logger.println(StringUtils.defaultString(getDescriptor().getDisplayName()) + " " + message);
+    private void log(final BuildListener listener, final String message) {
+        listener.getLogger().println(getClass().getSimpleName() + ": " + message);
     }
 
     /**
      * Perform the build step of uploading the configured file entries to the blobstore.
-     * <p/>
      * <ul>
      * <li>If the build result is failure, will not do anything except logging the stuff.</li>
      * <li>If the blobstore profile isn't configured, or the uploading failed, the build is set to be unstable.</li>
      * <li>If the upload is succesful, the build is set to be stable.</li>
      * </ul>
      *
-     * @param build    - reference to curerent build.
+     * @param build    - reference to current build.
      * @param launcher - {@link Launcher}
      * @param listener - {@link BuildListener}
-     * @return Always returns to indicate that build can continue, so we won't block other steps.
-     * @throws InterruptedException
-     * @throws IOException
+     * @return Always returns {@code true} to indicate that build can continue, so we won't block other steps.
+     * @throws InterruptedException if the upload gets interrupted.
+     * @throws IOException if an IO error occurs.
      */
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
 
-        if (build.getResult() == Result.FAILURE) {
-            // build failed. don't post
-            LOGGER.info("Build failed, not publishing any files to blobstore");
-            return true;
-        }
         BlobStoreProfile blobStoreProfile = getProfile();
         if (blobStoreProfile == null) {
-            log(listener.getLogger(), "No JClouds Blob Store blobStoreProfile is configured.");
-            build.setResult(Result.UNSTABLE);
+            log(listener, "No BlobStore profile is configured.");
+            build.setResult(Result.FAILURE);
             return true;
         }
-        log(listener.getLogger(), "Using JClouds blobStoreProfile: " + blobStoreProfile.getProfileName());
+        log(listener, "using BlobStore profile: " + blobStoreProfile.getProfileName());
         try {
             Map<String, String> envVars = build.getEnvironment(listener);
-
-            for (BlobStoreEntry blobStoreEntry : entries) {
-                String expandedSource = Util.replaceMacro(blobStoreEntry.sourceFile, envVars);
-                String expandedContainer = Util.replaceMacro(blobStoreEntry.container, envVars);
-                FilePath ws = build.getWorkspace();
-                FilePath[] paths = ws.list(expandedSource);
-                String wsPath = ws.getRemote();
-
-                if (paths.length == 0) {
-                    // try to do error diagnostics
-                    log(listener.getLogger(), "No file(s) found: " + expandedSource);
-                    String error = ws.validateAntFileMask(expandedSource);
-                    if (error != null)
-                        log(listener.getLogger(), error);
+            for (final BlobStoreEntry bse : entries) {
+                final Result res = build.getResult();
+                if (bse.onlyIfSuccessful && null != res && res.isWorseThan(Result.UNSTABLE)) {
+                    log(listener, "Skip publishing entry, because build is not successful");
+                    continue;
                 }
-                for (FilePath src : paths) {
-                    String expandedPath = getDestinationPath(blobStoreEntry.path, blobStoreEntry.keepHierarchy, wsPath, src, envVars);
-                    log(listener.getLogger(), "container=" + expandedContainer + ", path=" + expandedPath + ", file=" + src.getName());
-                    blobStoreProfile.upload(expandedContainer, expandedPath, src);
+                String xSource = Util.replaceMacro(bse.sourceFile, envVars);
+                String xContainer = Util.replaceMacro(bse.container, envVars);
+                FilePath ws = build.getWorkspace();
+                if (null != ws) {
+                    FilePath[] paths = ws.list(xSource);
+                    String wsPath = ws.getRemote();
+                    if (paths.length == 0) {
+                        // try to do error diagnostics
+                        String error = ws.validateAntFileMask(xSource, Integer.MAX_VALUE);
+                        if (error != null) {
+                            log(listener, error);
+                        }
+                        if (bse.allowEmptyFileset) {
+                            log(listener, "Ignoring empty file set for pattern: " + xSource);
+                        } else {
+                            log(listener, "Failing build");
+                            build.setResult(Result.FAILURE);
+                        }
+                    }
+                    for (FilePath src : paths) {
+                        String xPath = getDestinationPath(bse.path, bse.keepHierarchy, wsPath, src, envVars);
+                        log(listener, String.format("Publishing \"%s\" to container \"%s\", path \"%s\"",
+                                    src.getName(), xContainer, xPath));
+                        blobStoreProfile.upload(xContainer, xPath, src);
+                    }
+                } else {
+                    log(listener, "Unable to fetch workspace (NULL)");
+                    build.setResult(Result.FAILURE);
                 }
             }
         } catch (AuthorizationException e) {
             LOGGER.severe("Failed to upload files to Blob Store due to authorization exception.");
-            RuntimeException overrideException = new RuntimeException("Failed to upload files to Blob Store due to authorization exception.");
-            overrideException.printStackTrace(listener.error("Failed to upload files"));
-            build.setResult(Result.UNSTABLE);
+            RuntimeException overrideException = new RuntimeException("Failed to publish files due to authorization exception.");
+            overrideException.printStackTrace(listener.error("Failed to publish files"));
+            build.setResult(Result.FAILURE);
         } catch (IOException e) {
-            LOGGER.severe("Failed to upload files to Blob Store: " + e.getMessage());
-            e.printStackTrace(listener.error("Failed to upload files"));
-            build.setResult(Result.UNSTABLE);
+            LOGGER.severe("Failed to publish files: " + e.getMessage());
+            e.printStackTrace(listener.error("Failed to publish files"));
+            build.setResult(Result.FAILURE);
         }
 
         return true;
@@ -200,25 +223,24 @@ public class BlobStorePublisher extends Recorder implements Describable<Publishe
         if (resultPath.endsWith("/")) {
             resultPath = resultPath.substring(0, resultPath.length() - 1);
         }
-
-        return resultPath;
+        // Eliminate double slashes /./ and /../ for the same reason.
+        return resultPath.replaceAll("//+", "/").replaceAll("/\\.+/", "/");
     }
 
     /**
      * @return BuildStepMonitor.STEP
-     * @{see BuildStepMonitor#STEP}
+     * @see BuildStepMonitor#STEP
      */
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.STEP;
     }
 
     /**
-     * {@see hudson.model.Descriptor}
+     * @see hudson.model.Descriptor
      */
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
 
         private final CopyOnWriteList<BlobStoreProfile> profiles = new CopyOnWriteList<BlobStoreProfile>();
-        private static final Logger LOGGER = Logger.getLogger(DescriptorImpl.class.getName());
 
         public DescriptorImpl(Class<? extends Publisher> clazz) {
             super(clazz);
@@ -231,33 +253,38 @@ public class BlobStorePublisher extends Recorder implements Describable<Publishe
 
         @Override
         public String getDisplayName() {
-            return "Publish artifacts to JClouds Clouds Storage ";
+            return "Publish artifacts to JClouds BlobStore";
         }
 
         @Override
-        public boolean configure(StaplerRequest req, net.sf.json.JSONObject json) throws FormException {
-            profiles.replaceBy(req.bindParametersToList(BlobStoreProfile.class, "jcblobstore."));
+        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+            setProfiles(req.bindJSONToList(BlobStoreProfile.class, formData.get("profiles")));
             save();
             return true;
+        }
+       
+        /**
+         * Set profiles.
+         * This method allows managing profiles from within a groovy script like this:
+         * <pre>
+         * // Get credentials from somewhere and build a list of profiles...
+         * BlobStorePublisher.DESCRIPTOR.setProfiles(profiles)
+         * BlobStorePublisher.DESCRIPTOR.save()
+         * </pre>
+         *
+         * @param newProfiles A list of BlobStoreProfile.
+         */ 
+        public void setProfiles(List<BlobStoreProfile> newProfiles) {
+            profiles.replaceBy(newProfiles);
         }
 
         public BlobStoreProfile[] getProfiles() {
             return profiles.toArray(new BlobStoreProfile[0]);
         }
 
-        public FormValidation doLoginCheck(final StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-            String name = Util.fixEmpty(req.getParameter("name"));
-            if (name == null) {// name is not entered yet
-                return FormValidation.ok();
-            }
-            BlobStoreProfile profile = new BlobStoreProfile(name, req.getParameter("providerName"), req.getParameter("identity"),
-                    req.getParameter("credential"));
-            return FormValidation.ok();
-        }
-
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
-            return true;
+            return profiles != null && !profiles.isEmpty();
         }
 
         public ListBoxModel doFillProfileNameItems() {
