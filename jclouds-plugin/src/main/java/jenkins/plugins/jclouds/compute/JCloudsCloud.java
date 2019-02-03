@@ -15,28 +15,39 @@
  */
 package jenkins.plugins.jclouds.compute;
 
-import static org.jclouds.reflect.Reflection2.typeToken;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.servlet.ServletException;
-
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.CredentialsScope;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
+import com.google.inject.Module;
+import com.thoughtworks.xstream.converters.UnmarshallingContext;
+import hudson.Extension;
+import hudson.Util;
+import hudson.init.InitMilestone;
+import hudson.init.Initializer;
+import hudson.model.*;
+import hudson.security.ACL;
+import hudson.security.AccessControlled;
+import hudson.slaves.Cloud;
+import hudson.slaves.NodeProvisioner;
+import hudson.slaves.NodeProvisioner.PlannedNode;
+import hudson.util.*;
+import jenkins.model.Jenkins;
+import jenkins.plugins.jclouds.internal.CredentialsHelper;
+import jenkins.plugins.jclouds.internal.SSHPublicKeyExtractor;
+import jenkins.plugins.jclouds.modules.JenkinsConfigurationModule;
 import org.jclouds.Constants;
 import org.jclouds.ContextBuilder;
 import org.jclouds.apis.Apis;
@@ -48,64 +59,32 @@ import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.compute.options.TemplateOptions;
 import org.jclouds.location.reference.LocationConstants;
 import org.jclouds.logging.jdk.config.JDKLoggingModule;
-import org.jclouds.openstack.nova.v2_0.NovaApi;
+import org.jclouds.openstack.nova.v2_0.compute.NovaComputeService;
 import org.jclouds.openstack.nova.v2_0.domain.Flavor;
 import org.jclouds.openstack.nova.v2_0.domain.Quota;
-import org.jclouds.openstack.nova.v2_0.features.FlavorApi;
+import org.jclouds.openstack.nova.v2_0.domain.SimpleTenantUsage;
 import org.jclouds.providers.Providers;
 import org.jclouds.sshj.config.SshjSshClientModule;
 import org.jenkinsci.plugins.cloudstats.ProvisioningActivity;
 import org.jenkinsci.plugins.cloudstats.TrackedPlannedNode;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
-import org.kohsuke.stapler.AncestorInPath;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.*;
 
-import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.CredentialsScope;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-import com.google.common.base.Objects;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Iterables;
-import com.google.inject.Module;
-import com.thoughtworks.xstream.converters.UnmarshallingContext;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.servlet.ServletException;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import hudson.Extension;
-import hudson.Util;
-import hudson.init.InitMilestone;
-import hudson.init.Initializer;
-import hudson.model.AutoCompletionCandidates;
-import hudson.model.Computer;
-import hudson.model.Descriptor;
-import hudson.model.ItemGroup;
-import hudson.model.Label;
-import hudson.model.Node;
-import hudson.security.ACL;
-import hudson.security.AccessControlled;
-import hudson.slaves.Cloud;
-import hudson.slaves.NodeProvisioner;
-import hudson.slaves.NodeProvisioner.PlannedNode;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-import hudson.util.Secret;
-import hudson.util.StreamTaskListener;
-import hudson.util.XStream2;
-import jenkins.model.Jenkins;
-import jenkins.plugins.jclouds.internal.CredentialsHelper;
-import jenkins.plugins.jclouds.internal.SSHPublicKeyExtractor;
-import jenkins.plugins.jclouds.modules.JenkinsConfigurationModule;
+import static org.jclouds.reflect.Reflection2.typeToken;
 
 /**
  * The JClouds version of the Jenkins Cloud.
@@ -119,8 +98,6 @@ public class JCloudsCloud extends Cloud {
     static final String VCPU_KEY = "vcpu";
     static final String RAM_KEY = "ram";
     static final String INSTANCE_KEY = "instance";
-    static final int DEFAULT_VCPU = 4;
-    static final int DEFAULT_RAM = 8;
 
     public final String tenantId;
 
@@ -584,21 +561,6 @@ public class JCloudsCloud extends Cloud {
         public int runningNodeNum;
     }
 
-    private Quota getQuotaByTenant(NovaApi novaApi, String zone, String tenant) {
-        if (novaApi.getQuotaExtensionForZone(zone).isPresent()) {
-            return novaApi.getQuotaExtensionForZone(zone).get().getByTenant(tenant);
-        }
-        return null;
-    }
-
-    private Flavor getFlavorByFlavorId(NovaApi novaApi, String zone, String flavorId) {
-        FlavorApi flavorApi = novaApi.getFlavorApiForZone(zone);
-        if (flavorApi != null) {
-            return flavorApi.get(flavorId);
-        }
-        return null;
-    }
-
     /**
      * Determine how many nodes are currently running for this cloud.
      */
@@ -620,84 +582,56 @@ public class JCloudsCloud extends Cloud {
         return jCloudResource;
     }
 
-    // TODO: 9/3/2018 Kasper need to upgrade jclouds version to 2.1.0 
     private boolean isExceedCloudQuota(JCloudsSlaveTemplate template) {
-        //        ComputeService computeService = getCompute();
-        //        LOGGER.finest("Jcloud-Plugin-Debug: get tenant from template: " + tenantId);
-        //        Map<String, Integer> cloudQuota;
-        //        try {
-        //            cloudQuota = computeService.getQuotaByTenant(zones, tenantId);
-        //        } catch (Exception e) {
-        //            LOGGER.warning("Failed to get quota of cloud.\n" + e);
-        //            return false;
-        //        }
-        //
-        //        Map<String, Integer> totalUsage;
-        //        try {
-        //            totalUsage = computeService.getTotalUsageByTenant(zones, tenantId);
-        //        } catch (Exception e) {
-        //            LOGGER.warning("Failed to get total usage of tenant. \n" + e);
-        //            return false;
-        //        }
-        //
-        //        int plannedVcpu;
-        //        int plannedRam;
-        //
-        //        Map<String, Integer> flavor = ImmutableMap.of(VCPU_KEY, 0, RAM_KEY, 0, INSTANCE_KEY, 0);
-        //        if (Strings.isNullOrEmpty(template.hardwareId)) {
-        //            plannedVcpu = ((Double) template.cores).intValue();
-        //            plannedRam = template.ram;
-        //        } else {
-        //            String flavorId = template.hardwareId.split("/")[1];
-        //            LOGGER.finest("Jcloud-Plugin-Debug: flavorId: " + flavorId);
-        //            try {
-        //                flavor = computeService.getFlavorByFlavorId(zones, flavorId);
-        //                plannedVcpu = flavor.get(VCPU_KEY);
-        //                plannedRam = flavor.get(RAM_KEY);
-        //            } catch (Exception e) {
-        //                LOGGER.warning("Failed to get flavor. \n" + e);
-        //                // Use default value
-        //                plannedVcpu = DEFAULT_VCPU;
-        //                plannedRam = DEFAULT_RAM;
-        //            }
-        //        }
-        //
-        //        logResourceUsage(cloudQuota, flavor, totalUsage);
-        //        LOGGER.finest("Jcloud-Plugin-Debug: planned vcpu:" + plannedVcpu + " planned ram: " + plannedRam);
-        //
-        //        if (totalUsage.get(VCPU_KEY) + plannedVcpu > cloudQuota.get(VCPU_KEY)) {
-        //            logResourceExceed(VCPU_KEY, cloudQuota, totalUsage);
-        //            return true;
-        //        } else if (totalUsage.get(RAM_KEY) + plannedRam > cloudQuota.get(RAM_KEY)) {
-        //            logResourceExceed(RAM_KEY, cloudQuota, totalUsage);
-        //            return true;
-        //        } else if (totalUsage.get(INSTANCE_KEY) + 1 > cloudQuota.get(INSTANCE_KEY)) {
-        //            logResourceExceed(INSTANCE_KEY, cloudQuota, totalUsage);
-        //            return true;
-        //        }
+        NovaComputeService computeService = (NovaComputeService) getCompute();
+        LOGGER.finest("Jclouds-Plugin-Debug: get tenant from template: " + tenantId);
+        Optional<Quota> quotaOptional = computeService.getQuotaByTenant(zones, tenantId);
+        Optional<Flavor> flavorOptional =
+            computeService.getFlavorByFlavorId(zones, template.hardwareId.split("/")[1]);
+        Optional<SimpleTenantUsage> tenantUsageOptional =
+            computeService.getTotalUsageByTenant(zones, tenantId);
+
+        if (quotaOptional.isPresent() && flavorOptional.isPresent() && tenantUsageOptional
+            .isPresent()) {
+            Quota quota = quotaOptional.get();
+            Flavor flavor = flavorOptional.get();
+            SimpleTenantUsage tenantUsage = tenantUsageOptional.get();
+            logResourceUsage(quota, flavor, tenantUsage);
+
+            if (tenantUsage.getTotalVcpusUsage() + flavor.getVcpus() > quota.getCores()) {
+                LOGGER.info(String
+                    .format("The %s (current + planned = %f + %d) exceeds the quota %d", VCPU_KEY,
+                        tenantUsage.getTotalVcpusUsage(), flavor.getVcpus(), quota.getCores()));
+                return true;
+            } else if (tenantUsage.getTotalMemoryMbUsage() + flavor.getRam() > quota.getRam()) {
+                LOGGER.info(String
+                    .format("The %s (current + planned = %f + %d) exceeds the quota %d", RAM_KEY,
+                        tenantUsage.getTotalMemoryMbUsage(), flavor.getRam(), quota.getRam()));
+                return true;
+            } else if (tenantUsage.getServerUsages().size() + 1 > quota.getInstances()) {
+                LOGGER.info(String
+                    .format("The %s (current + planned = %d + %d) exceeds the quota %d",
+                        INSTANCE_KEY, tenantUsage.getServerUsages().size(), 1,
+                        quota.getInstances()));
+                return true;
+            }
+        }
         return false;
     }
 
-    private void logResourceUsage(Map<String, Integer> cloudQuota, Map<String, Integer> flavor,
-            Map<String, Integer> totalUsage) {
-        LOGGER.finest(String.format("[Jcloud-Plugin-Debug]: #cloudQuota#: %s quota: %d, %s quota: %d, %s, %d quota",
-                VCPU_KEY, cloudQuota.get(VCPU_KEY),
-                RAM_KEY, cloudQuota.get(RAM_KEY),
-                INSTANCE_KEY, cloudQuota.get(INSTANCE_KEY)));
+    private void logResourceUsage(Quota quota, Flavor flavor, SimpleTenantUsage tenantUsage) {
+        LOGGER.finest(String.format(
+            "[Jclouds-Plugin-Debug]: #Quota#: vCPU quota: %d, RAM quota: %d, Instance quota: %d",
+            quota.getCores(), quota.getRam(), quota.getInstances()));
 
-        LOGGER.finest(String.format("[Jcloud-Plugin-Debug]: #flavor#: %s quota: %d, %s quota: %d",
-                VCPU_KEY, flavor.get(VCPU_KEY),
-                RAM_KEY, flavor.get(RAM_KEY)));
+        LOGGER.finest(String
+            .format("[Jclouds-Plugin-Debug]: #flavor#: vCPU: %d, RAM: %d", flavor.getVcpus(),
+                flavor.getRam()));
 
-        LOGGER.finest(String.format("[Jcloud-Plugin-Debug]: #totalUsage#: %s quota: %d, %s quota: %d, %s, %d quota",
-                VCPU_KEY, totalUsage.get(VCPU_KEY),
-                RAM_KEY, totalUsage.get(RAM_KEY),
-                INSTANCE_KEY, totalUsage.get(INSTANCE_KEY)));
-    }
-
-    private void logResourceExceed(String key, Map<String, Integer> cloudQuota, Map<String, Integer> totalUsage) {
-        LOGGER.info(String.format("The %s (current + planned = %d + %d) exceeds the quota %d",
-                key, totalUsage.get(key), 1, cloudQuota.get(key)));
+        LOGGER.finest(String
+            .format("[Jclouds-Plugin-Debug]: #tenantUsage#: vCPU: %f, RAM: %f, instances: %d",
+                tenantUsage.getTotalVcpusUsage(), tenantUsage.getTotalMemoryMbUsage(),
+                tenantUsage.getServerUsages().size()));
     }
 
     void registerPhoneHomeMonitor(final PhoneHomeMonitor monitor) {

@@ -1,14 +1,6 @@
 package jenkins.plugins.jclouds.compute;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.logging.Level;
-
-import org.jclouds.compute.ComputeService;
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import com.google.common.base.Strings;
-
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Launcher;
@@ -20,16 +12,23 @@ import hudson.slaves.OfflineCause;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.LogTaskListener;
+import org.jclouds.openstack.nova.v2_0.compute.NovaComputeService;
+import org.kohsuke.stapler.DataBoundConstructor;
 
-public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
-    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(JCloudsSingleUseSlaveBuildWrapper.class.getName());
+import java.io.IOException;
+import java.util.Map;
+import java.util.logging.Level;
+
+public class JCloudsBuildAdvancedWrapper extends BuildWrapper {
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(
+        JCloudsBuildAdvancedWrapper.class.getName());
     private static final String BUILD_TAG = "BUILD_TAG";
     private static final String BUILD_USER = "BUILD_USER";
     private static final String SLAVE_POST_ACTION = "slavePostAction";
     private static final int OFFLINE_INSTANCE_RETENTION_TIME_IN_DAYS = 1;
 
     @DataBoundConstructor
-    public JCloudsSingleUseSlaveBuildWrapper() {
+    public JCloudsBuildAdvancedWrapper() {
 
     }
 
@@ -43,18 +42,17 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
             final JCloudsCloud jcloudsCloud = JCloudsCloud.getByName(c.getCloudName());
             final JCloudsSlave jcloudsSlave = c.getNode();
             final String nodeId = jcloudsSlave.getNodeId();
-            final ComputeService computeService = jcloudsCloud.getCompute();
+            final NovaComputeService computeService = (NovaComputeService)jcloudsCloud.getCompute();
 
             // Rename that running node with job name and user name
             final String newNodeName = getNewNodeName(build);
-            LOGGER.info("Got newNodeName " + newNodeName + " for running node(" + nodeId + ")");
-            // TODO: 9/3/2018 Kasper need to upgrade jclouds version to 2.1.0
-            //            try {
-            //                // have inside checkNotNull for input newNodeName
-            //                computeService.renameNode(nodeId, newNodeName);
-            //            } catch (Exception e) {
-            //                LOGGER.warning("Failed to rename the node.\n" + e);
-            //            }
+            LOGGER.info("New NodeName " + newNodeName + " for running node(" + nodeId + ")");
+            try {
+                // have inside checkNotNull for input newNodeName
+                computeService.renameNode(nodeId, newNodeName);
+            } catch (Exception e) {
+                LOGGER.warning("Failed to rename the node.\n" + e);
+            }
 
             return new Environment() {
                 @Override
@@ -132,10 +130,7 @@ public class JCloudsSingleUseSlaveBuildWrapper extends BuildWrapper {
         EnvVars env;
         try {
             env = getJenkinsEnv(build);
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to get build environment", e);
-            return null;
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             LOGGER.log(Level.SEVERE, "Failed to get build environment", e);
             return null;
         }
