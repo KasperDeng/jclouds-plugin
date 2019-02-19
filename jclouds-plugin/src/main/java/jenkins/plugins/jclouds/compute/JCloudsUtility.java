@@ -2,9 +2,7 @@ package jenkins.plugins.jclouds.compute;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -19,11 +17,14 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import com.google.common.base.Optional;
 import hudson.model.User;
 import hudson.tasks.Mailer;
 import hudson.util.ReflectionUtils;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
+import org.jclouds.compute.ComputeService;
+import org.jclouds.openstack.nova.v2_0.compute.NovaComputeService;
 
 /**
  * Class for some jenkins utilities by reflection
@@ -34,14 +35,14 @@ public class JCloudsUtility {
     /**
      * Check current user whether is administrator
      */
-    public static Boolean isAdmin() {
+    static Boolean isAdmin() {
         return Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER);
     }
 
     /**
      * Get current user name
      */
-    public static String getCurrentUserName() {
+    static String getCurrentUserName() {
         User user = Jenkins.getInstance().getMe();
         return user.getFullName().toLowerCase();
     }
@@ -49,7 +50,7 @@ public class JCloudsUtility {
     /**
      * Save jenkins nodes setting to the config.xml
      */
-    public static void saveNodesSettingToConfig() {
+    static void saveNodesSettingToConfig() {
         try {
             // renew the node list
             Jenkins.getInstance().setNodes(Jenkins.getInstance().getNodes());
@@ -61,7 +62,7 @@ public class JCloudsUtility {
     /**
      * Save jenkins setting to the config.xml
      */
-    public static void saveSettingToConfig() {
+    static void saveSettingToConfig() {
         try {
             Jenkins.getInstance().save();
         } catch (IOException e) {
@@ -69,7 +70,7 @@ public class JCloudsUtility {
         }
     }
 
-    public static void updateComputerList() {
+    static void updateComputerList() {
         Method updateComputerList = ReflectionUtils.findMethod(Jenkins.getInstance().getClass(), "updateComputerList", null);
         updateComputerList.setAccessible(true);
         try {
@@ -81,7 +82,7 @@ public class JCloudsUtility {
         }
     }
 
-    public static void sendEmail(String emailAddress, String emailSubject, StringBuilder emailContent) {
+    static void sendEmail(String emailAddress, String emailSubject, StringBuilder emailContent) {
         String charset = "UTF-8";
         MimeMessage mail = new MimeMessage(Jenkins.getInstance().getDescriptorByType(Mailer.DescriptorImpl.class).
                 createSession());
@@ -106,7 +107,7 @@ public class JCloudsUtility {
         }
     }
 
-    public static void setSlaveDescription(JCloudsSlave jcloudsSlave, String description) {
+    static void setSlaveDescription(JCloudsSlave jcloudsSlave, String description) {
         Field nodeDescription = ReflectionUtils.findField(jcloudsSlave.getClass(), "description");
         if (nodeDescription != null) {
             nodeDescription.setAccessible(true);
@@ -117,5 +118,27 @@ public class JCloudsUtility {
             }
         }
 
+    }
+
+    static Optional<NovaComputeService> getNovaComputeService(ComputeService computeService) {
+        if (Proxy.isProxyClass(computeService.getClass())) {
+            try {
+                InvocationHandler invocationHandler = Proxy.getInvocationHandler(computeService);
+                // invocationHandler is instance of com.google.inject.internal.DelegatingInvocationHandler (from guice),
+                // but DelegatingInvocationHandler is not public class.
+                if (invocationHandler.getClass().getCanonicalName()
+                    .equals("com.google.inject.internal.DelegatingInvocationHandler")) {
+                    Method getDelegate =
+                        invocationHandler.getClass().getDeclaredMethod("getDelegate");
+                    getDelegate.setAccessible(true);
+                    return Optional.of((NovaComputeService) getDelegate.invoke(invocationHandler));
+                }
+            } catch (Exception e) {
+                LOGGER.warning("Failed to get NovaComputeService.\n" + e);
+                return Optional.absent();
+            }
+        }
+        LOGGER.warning("The input computeService is not expected proxy object. " + computeService);
+        return Optional.absent();
     }
 }

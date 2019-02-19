@@ -1,5 +1,6 @@
 package jenkins.plugins.jclouds.compute;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -17,6 +18,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 
 public class JCloudsBuildAdvancedWrapper extends BuildWrapper {
@@ -36,22 +38,25 @@ public class JCloudsBuildAdvancedWrapper extends BuildWrapper {
     public Environment setUp(final AbstractBuild build, Launcher launcher, final BuildListener listener) {
         LOGGER.info("Debug: Start single-use slave Extension setup");
 
-        if (JCloudsComputer.class.isInstance(build.getExecutor().getOwner())) {
+        if (Objects.requireNonNull(build.getExecutor()).getOwner() instanceof JCloudsComputer) {
             // Get current running node
             final JCloudsComputer c = (JCloudsComputer) build.getExecutor().getOwner();
             final JCloudsCloud jcloudsCloud = JCloudsCloud.getByName(c.getCloudName());
             final JCloudsSlave jcloudsSlave = c.getNode();
-            final String nodeId = jcloudsSlave.getNodeId();
-            final NovaComputeService computeService = (NovaComputeService)jcloudsCloud.getCompute();
+            final String nodeId = Objects.requireNonNull(jcloudsSlave).getNodeId();
 
             // Rename that running node with job name and user name
             final String newNodeName = getNewNodeName(build);
             LOGGER.info("New NodeName " + newNodeName + " for running node(" + nodeId + ")");
-            try {
-                // have inside checkNotNull for input newNodeName
-                computeService.renameNode(nodeId, newNodeName);
-            } catch (Exception e) {
-                LOGGER.warning("Failed to rename the node.\n" + e);
+            Optional<NovaComputeService> novaComputeServiceOptional =
+                JCloudsUtility.getNovaComputeService(jcloudsCloud.getCompute());
+
+            if (novaComputeServiceOptional.isPresent()) {
+                novaComputeServiceOptional.get().renameNode(nodeId, newNodeName);
+                LOGGER.info("Rename to " + newNodeName);
+            } else {
+                LOGGER.warning(
+                    "Failed to rename the node since no NovaComputeService instance found");
             }
 
             return new Environment() {
@@ -134,10 +139,10 @@ public class JCloudsBuildAdvancedWrapper extends BuildWrapper {
             LOGGER.log(Level.SEVERE, "Failed to get build environment", e);
             return null;
         }
-        return constructNodeName(env);
+        return buildNodeName(env);
     }
 
-    private String constructNodeName(EnvVars env) {
+    private String buildNodeName(EnvVars env) {
         String buildTag = env.get(BUILD_TAG);
         if (Strings.isNullOrEmpty(buildTag)){
             LOGGER.log(Level.SEVERE, "Failed to get BUILD_USER environment during assign new node name to slave");

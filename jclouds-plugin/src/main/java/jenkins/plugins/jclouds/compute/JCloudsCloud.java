@@ -583,37 +583,49 @@ public class JCloudsCloud extends Cloud {
     }
 
     private boolean isExceedCloudQuota(JCloudsSlaveTemplate template) {
-        NovaComputeService computeService = (NovaComputeService) getCompute();
-        LOGGER.finest("Jclouds-Plugin-Debug: get tenant from template: " + tenantId);
-        Optional<Quota> quotaOptional = computeService.getQuotaByTenant(zones, tenantId);
-        Optional<Flavor> flavorOptional =
-            computeService.getFlavorByFlavorId(zones, template.hardwareId.split("/")[1]);
-        Optional<SimpleTenantUsage> tenantUsageOptional =
-            computeService.getTotalUsageByTenant(zones, tenantId);
+        Optional<NovaComputeService> novaComputeServiceOptional =
+            JCloudsUtility.getNovaComputeService(getCompute());
 
-        if (quotaOptional.isPresent() && flavorOptional.isPresent() && tenantUsageOptional
-            .isPresent()) {
-            Quota quota = quotaOptional.get();
-            Flavor flavor = flavorOptional.get();
-            SimpleTenantUsage tenantUsage = tenantUsageOptional.get();
-            logResourceUsage(quota, flavor, tenantUsage);
+        if (novaComputeServiceOptional.isPresent()) {
+            LOGGER.finest("Jclouds-Plugin-Debug: get tenant from template: " + tenantId);
+            Optional<Quota> quotaOptional =
+                novaComputeServiceOptional.get().getQuotaByTenant(zones, tenantId);
+            Optional<Flavor> flavorOptional = novaComputeServiceOptional.get()
+                .getFlavorByFlavorId(zones, template.hardwareId.split("/")[1]);
+            Optional<SimpleTenantUsage> tenantUsageOptional =
+                novaComputeServiceOptional.get().getTotalUsageByTenant(zones, tenantId);
 
-            if (tenantUsage.getTotalVcpusUsage() + flavor.getVcpus() > quota.getCores()) {
-                LOGGER.info(String
-                    .format("The %s (current + planned = %f + %d) exceeds the quota %d", VCPU_KEY,
-                        tenantUsage.getTotalVcpusUsage(), flavor.getVcpus(), quota.getCores()));
-                return true;
-            } else if (tenantUsage.getTotalMemoryMbUsage() + flavor.getRam() > quota.getRam()) {
-                LOGGER.info(String
-                    .format("The %s (current + planned = %f + %d) exceeds the quota %d", RAM_KEY,
-                        tenantUsage.getTotalMemoryMbUsage(), flavor.getRam(), quota.getRam()));
-                return true;
-            } else if (tenantUsage.getServerUsages().size() + 1 > quota.getInstances()) {
-                LOGGER.info(String
-                    .format("The %s (current + planned = %d + %d) exceeds the quota %d",
-                        INSTANCE_KEY, tenantUsage.getServerUsages().size(), 1,
-                        quota.getInstances()));
-                return true;
+            if (quotaOptional.isPresent() && flavorOptional.isPresent() && tenantUsageOptional
+                .isPresent()) {
+                Quota quota = quotaOptional.get();
+                Flavor flavor = flavorOptional.get();
+                SimpleTenantUsage tenantUsage = tenantUsageOptional.get();
+                logResourceUsage(quota, flavor, tenantUsage);
+
+                if (tenantUsage.getTotalVcpusUsage() + flavor.getVcpus() > quota.getCores()) {
+                    LOGGER.info(String
+                        .format("The %s (current + planned = %f + %d) exceeds the quota %d",
+                            VCPU_KEY, tenantUsage.getTotalVcpusUsage(), flavor.getVcpus(),
+                            quota.getCores()));
+                    return true;
+                } else if (tenantUsage.getTotalMemoryMbUsage() + flavor.getRam() > quota.getRam()) {
+                    LOGGER.info(String
+                        .format("The %s (current + planned = %f + %d) exceeds the quota %d",
+                            RAM_KEY, tenantUsage.getTotalMemoryMbUsage(), flavor.getRam(),
+                            quota.getRam()));
+                    return true;
+                } else if (tenantUsage.getServerUsages().size() + 1 > quota.getInstances()) {
+                    LOGGER.info(String
+                        .format("The %s (current + planned = %d + %d) exceeds the quota %d",
+                            INSTANCE_KEY, tenantUsage.getServerUsages().size(), 1,
+                            quota.getInstances()));
+                    return true;
+                }
+            } else {
+                LOGGER.warning(String.format(
+                    "Failed to calculate resource usage. Quota: %s, flavor: %s, tenant usage: %s",
+                    quotaOptional.isPresent(), flavorOptional.isPresent(),
+                    tenantUsageOptional.isPresent()));
             }
         }
         return false;

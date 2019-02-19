@@ -111,7 +111,7 @@ When the build is complete and succesful, the configured files will be published
   2. Give name (based on jenkins env vars BUILD_TAG + BUILD_USER) for openstack instance.
   3. Offline the instance (based on jenkins env var slavePostAction: offline/destroy) and keep in openstack for further debug.
   4. Determine the resource usage in openstack when starting new instance
-     - Create some APIs in Jcloud. They are used for resource calculation.
+     - Create some APIs in JClouds. They are used for resource calculation.
        + getQuotaByTenant
        + getTotalUsageByTenant
        + getFlavorByFlavorId
@@ -128,7 +128,7 @@ When the build is complete and succesful, the configured files will be published
      the offline slave cannot be re-connected
  11. Enhance the jcloud computer configure page with a offline survive time countdown and a calendar for terminated date selection.
  12. Use the terminated date instead of retention time, for retention audit. Avoid retention time re-calculation issue when jenkins restart.
-* Config in jenkins global configuration (just highlight some inportant)
+* Config in jenkins global configuration (just highlight some important)
   - Cloud (JClouds)
     + tenantId: get help by clicking "?". Get tenantId by CLI: keystone tenant-list. It's used for getting os quota and usage.
   - Cloud Instance Templates

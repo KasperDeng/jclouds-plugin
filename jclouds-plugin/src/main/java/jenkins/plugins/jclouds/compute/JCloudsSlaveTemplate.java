@@ -481,22 +481,16 @@ public class JCloudsSlaveTemplate implements Describable<JCloudsSlaveTemplate>, 
                 options.securityGroups(securityGroupsArray);
             }
 
-            //            if (assignFloatingIp && options instanceof NovaTemplateOptions) {
-            //                LOGGER.info("Setting autoAssignFloatingIp to true");
-            //                options.as(NovaTemplateOptions.class).autoAssignFloatingIp(true);
-            //            }
-
             if (!Strings.isNullOrEmpty((floatingIpPoolName)) && options instanceof NovaTemplateOptions) {
                 LOGGER.info("Setting floatingIpPoolName to " + floatingIpPoolName);
                 options.as(NovaTemplateOptions.class).floatingIpPoolNames(floatingIpPoolName);
 
-                // TODO: 9/3/2018 Kasper need to upgrade jclouds version to 2.1.0 
-                //                if (!Strings.isNullOrEmpty(networkRangeFloatingIpAssociated)
-                //                        && options instanceof NovaTemplateOptions) {
-                //                    LOGGER.info("Associate floating ip to network range " + networkRangeFloatingIpAssociated);
-                //                    options.as(NovaTemplateOptions.class)
-                //                            .networkRangeFloatingIpAssociated(networkRangeFloatingIpAssociated);
-                //                }
+                if (!Strings.isNullOrEmpty(networkRangeFloatingIpAssociated)) {
+                    LOGGER.info("Associate floating ip to network range "
+                        + networkRangeFloatingIpAssociated);
+                    options.as(NovaTemplateOptions.class)
+                        .networkRangeFloatingIpAssociated(networkRangeFloatingIpAssociated);
+                }
             }
 
             if (useConfigDrive && options instanceof NovaTemplateOptions) {
